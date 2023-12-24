@@ -1,5 +1,7 @@
 package com.tyron.code.project.model;
 
+import com.google.common.collect.ImmutableSet;
+
 import java.nio.file.Path;
 import java.util.*;
 
@@ -14,23 +16,35 @@ public class JarModule extends ModuleWithSourceFiles {
     }
 
     private final Path jarPath;
-    private final Set<UnparsedJavaFile> classes;
 
-    private final PackageScope rootPackage;
+    private final Map<Path, UnparsedJavaFile> classMap;
+
 
     private JarModule(ModuleType moduleType, Path jarPath) {
         super(moduleType, jarPath.getFileName().toString());
         this.jarPath = jarPath;
-        this.classes = new HashSet<>();
-        rootPackage = new PackageScope("");
+
+        classMap = new HashMap<>();
     }
 
     public Path getJarPath() {
         return jarPath;
     }
 
+    @Override
+    public void addClass(UnparsedJavaFile unparsedJavaFile) {
+        super.addClass(unparsedJavaFile);
+
+        classMap.put(unparsedJavaFile.path(), unparsedJavaFile);
+    }
+
+    @Override
+    public void removeFileFromPackage(UnparsedJavaFile file) {
+        super.removeFileFromPackage(file);
+        classMap.remove(file.path());
+    }
 
     public Set<UnparsedJavaFile> getClasses() {
-        return classes;
+        return ImmutableSet.copyOf(classMap.values());
     }
 }

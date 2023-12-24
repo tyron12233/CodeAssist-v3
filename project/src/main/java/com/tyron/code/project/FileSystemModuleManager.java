@@ -122,7 +122,7 @@ public class FileSystemModuleManager implements ModuleManager {
             Path rootJarPath = PathUtils.getRootPathForJarFile(path);
 
             List<JarReader.ClassInfo> infos = JarReader.readJarFile(path.toString());
-            infos.stream().map(it -> new UnparsedJavaFile(jarModule, rootJarPath, it.getClassName(), it.getPackageQualifiers())).forEach(jarModule::addClass);
+            infos.stream().map(it -> new UnparsedJavaFile(jarModule, rootJarPath, it.className(), it.packageQualifiers())).forEach(jarModule::addClass);
 
             projectModule.addImplementationDependency(jarModule);
         } catch (Throwable t) {

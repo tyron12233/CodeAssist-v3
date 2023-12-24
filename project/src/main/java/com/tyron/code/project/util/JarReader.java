@@ -23,9 +23,7 @@ public class JarReader {
 
                         List<String> qualifiers = getAsQualifierList(getPackageOnly(classPath));
 
-                        ClassInfo classInfo = new ClassInfo();
-                        classInfo.setPackageQualifiers(qualifiers);
-                        classInfo.setClassName(className);
+                        ClassInfo classInfo = new ClassInfo(qualifiers, className, file);
                         classInfos.add(classInfo);
                     }
                     return FileVisitResult.CONTINUE;
@@ -82,24 +80,7 @@ public class JarReader {
         return validQualifiers;
     }
 
-    public static class ClassInfo {
-        private List<String> packageQualifiers;
-        private String className;
+    public record ClassInfo(List<String> packageQualifiers, String className, Path classPath) {
 
-        public List<String> getPackageQualifiers() {
-            return packageQualifiers;
-        }
-
-        public void setPackageQualifiers(List<String> packageQualifiers) {
-            this.packageQualifiers = packageQualifiers;
-        }
-
-        public String getClassName() {
-            return className;
-        }
-
-        public void setClassName(String className) {
-            this.className = className;
-        }
     }
 }
