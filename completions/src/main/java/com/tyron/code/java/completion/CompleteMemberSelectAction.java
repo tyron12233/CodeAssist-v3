@@ -6,6 +6,7 @@ import com.tyron.code.project.model.*;
 import com.tyron.code.project.model.Module;
 import com.tyron.code.project.util.JarReader;
 import com.tyron.code.project.util.ModuleUtils;
+import shadow.com.sun.source.tree.ImportTree;
 import shadow.com.sun.source.tree.MemberSelectTree;
 import shadow.com.sun.source.tree.Scope;
 import shadow.com.sun.source.tree.Tree;
@@ -24,7 +25,13 @@ public class CompleteMemberSelectAction implements CompletionAction {
         JavacTaskImpl task = args.analysisResult().javacTask();
         TreePath path = args.currentAnalyzedPath();
         var trees = Trees.instance(task);
-        var select = (MemberSelectTree) path.getLeaf();
+
+        MemberSelectTree select;
+        if (path.getLeaf() instanceof ImportTree importTree) {
+            select = (MemberSelectTree) importTree.getQualifiedIdentifier();
+        } else {
+            select = (MemberSelectTree) path.getLeaf();
+        }
 
         path = new TreePath(path, select.getExpression());
         var isStatic = trees.getElement(path) instanceof TypeElement;

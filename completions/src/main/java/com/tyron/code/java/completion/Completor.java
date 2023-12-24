@@ -124,9 +124,7 @@ public class Completor {
 
 
             CompletionAction action;
-
-
-            if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree) {
+            if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree || currentAnalyzedPath.getLeaf() instanceof ImportTree importTree) {
                 action = new CompleteMemberSelectAction();
             } else if (currentAnalyzedPath.getLeaf() instanceof IdentifierTree) {
                 action = new CompleteSymbolAction();
