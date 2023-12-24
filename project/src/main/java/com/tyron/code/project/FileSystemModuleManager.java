@@ -121,7 +121,7 @@ public class FileSystemModuleManager implements ModuleManager {
             JarModule jarModule = JarModule.createJarDependency(path);
             Path rootJarPath = PathUtils.getRootPathForJarFile(path);
 
-            List<JarReader.ClassInfo> infos = JarReader.readJarFile(path.toString());
+            List<JarReader.ClassInfo> infos = JarReader.readJarFile(path);
             infos.stream().map(it -> new UnparsedJavaFile(jarModule, rootJarPath, it.className(), it.packageQualifiers())).forEach(jarModule::addClass);
 
             projectModule.addImplementationDependency(jarModule);

@@ -1,6 +1,8 @@
 package com.tyron.code.project.util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.tyron.code.project.model.JarModule;
+import com.tyron.code.project.model.UnparsedJavaFile;
 
 import java.io.IOException;
 import java.net.URI;
@@ -10,11 +12,11 @@ import java.util.*;
 
 public class JarReader {
 
-    public static List<ClassInfo> readJarFile(String jarPath) throws IOException {
+    public static List<ClassInfo> readJarFile(Path path) throws IOException {
         List<ClassInfo> classInfos = new ArrayList<>();
 
 
-        FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + Paths.get(jarPath).toUri()), Map.of());
+        FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + path.toUri()), Map.of());
         Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
@@ -33,6 +35,14 @@ public class JarReader {
 
 
         return classInfos;
+    }
+
+    public static JarModule toJarModule(Path path, boolean isJdk) throws IOException {
+        List<ClassInfo> infos = readJarFile(path);
+        JarModule module = isJdk ? JarModule.createJdkDependency(path) : JarModule.createJarDependency(path);
+        infos.stream().map(it -> new UnparsedJavaFile(module, it.classPath(), it.className(), it.packageQualifiers()))
+                .forEach(module::addClass);
+        return module;
     }
 
     public static String getPackageOnly(String fqn) {

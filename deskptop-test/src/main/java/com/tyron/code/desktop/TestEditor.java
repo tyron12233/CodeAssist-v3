@@ -113,14 +113,10 @@ public class TestEditor extends JFrame {
             simpleFileManager.openFileForSnapshot(editingFile.toUri(), "package test;\n\nclass Main {\n\tpublic static void main(String[] args) {\n\t\t\n\t}\n}");
 
             Path androidJar = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/deskptop-test/android.jar");
-            JarModule jdkModule = JarModule.createJdkDependency(androidJar);
-            List<JarReader.ClassInfo> infos = JarReader.readJarFile(androidJar.toString());
-            infos.stream().map(it -> new UnparsedJavaFile(jdkModule, it.classPath(), it.className(), it.packageQualifiers())).forEach(jdkModule::addClass);
+            JarModule jdkModule = JarReader.toJarModule(androidJar, true);
 
             Path commonsJar = Paths.get("/home/tyronscott/Downloads/guava-33.0.0-jre.jar");
-            JarModule commonsJarModule = JarModule.createJarDependency(commonsJar);
-            List<JarReader.ClassInfo> commonsInfos = JarReader.readJarFile(commonsJar.toString());
-            commonsInfos.stream().map(it -> new UnparsedJavaFile(commonsJarModule, it.classPath(), it.className(), it.packageQualifiers())).forEach(commonsJarModule::addClass);
+            JarModule commonsJarModule = JarReader.toJarModule(commonsJar, false);
 
             projectModule.addJdkDependency(jdkModule);
             projectModule.addImplementationDependency(commonsJarModule);
