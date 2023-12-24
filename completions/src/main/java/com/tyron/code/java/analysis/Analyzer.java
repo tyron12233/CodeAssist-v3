@@ -1,40 +1,22 @@
 package com.tyron.code.java.analysis;
 
-import com.google.common.collect.Iterables;
 import com.tyron.code.java.ModuleFileManager;
-import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.FileSnapshot;
 import com.tyron.code.project.model.ProjectModule;
 import shadow.com.sun.source.tree.CompilationUnitTree;
-import shadow.com.sun.source.util.JavacTask;
-import shadow.com.sun.tools.javac.api.JavacScope;
 import shadow.com.sun.tools.javac.api.JavacTaskImpl;
-import shadow.com.sun.tools.javac.api.JavacTaskPool;
 import shadow.com.sun.tools.javac.api.JavacTool;
-import shadow.com.sun.tools.javac.code.DeferredCompletionFailureHandler;
-import shadow.com.sun.tools.javac.code.Scope;
 import shadow.com.sun.tools.javac.code.Symtab;
-import shadow.com.sun.tools.javac.code.Types;
-import shadow.com.sun.tools.javac.comp.Attr;
-import shadow.com.sun.tools.javac.comp.AttrContext;
-import shadow.com.sun.tools.javac.comp.Enter;
-import shadow.com.sun.tools.javac.comp.Env;
-import shadow.com.sun.tools.javac.file.JavacFileManager;
-import shadow.com.sun.tools.javac.tree.JCTree;
 import shadow.com.sun.tools.javac.util.Context;
 import shadow.javax.lang.model.element.Element;
-import shadow.javax.tools.*;
 
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -79,7 +61,6 @@ public class Analyzer {
 
     public Analyzer(FileManager fileManager, ProjectModule projectModule, Consumer<String> progressConsumer) {
         this.progressConsumer = progressConsumer;
-
         moduleFileManager = new ModuleFileManager(fileManager, projectModule);
     }
 

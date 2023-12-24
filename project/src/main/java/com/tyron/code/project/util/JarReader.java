@@ -21,7 +21,7 @@ public class JarReader {
                         String classPath = getFqn(file.toString());
                         String className = getClassName(classPath);
 
-                        List<String> qualifiers = getAsQualifierList(classPath.substring(0, className.length() + ".class".length()));
+                        List<String> qualifiers = getAsQualifierList(getPackageOnly(classPath));
 
                         ClassInfo classInfo = new ClassInfo();
                         classInfo.setPackageQualifiers(qualifiers);
@@ -34,6 +34,15 @@ public class JarReader {
         }
 
         return classInfos;
+    }
+
+    public static String getPackageOnly(String fqn) {
+        if (fqn.endsWith(".class")) {
+            fqn = fqn.substring(0, fqn.length() - ".class".length());
+        }
+
+        String className = getClassName(fqn);
+        return fqn.substring(0, fqn.length() - className.length() - 1);
     }
 
     /**
