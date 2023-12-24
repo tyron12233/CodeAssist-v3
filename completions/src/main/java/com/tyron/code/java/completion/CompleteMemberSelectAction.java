@@ -13,13 +13,8 @@ import shadow.com.sun.source.util.TreePath;
 import shadow.com.sun.source.util.Trees;
 import shadow.com.sun.tools.javac.api.JavacTaskImpl;
 import shadow.com.sun.tools.javac.code.Type;
-import shadow.javax.lang.model.element.ElementKind;
-import shadow.javax.lang.model.element.ExecutableElement;
-import shadow.javax.lang.model.element.Modifier;
-import shadow.javax.lang.model.element.TypeElement;
-import shadow.javax.lang.model.type.ArrayType;
-import shadow.javax.lang.model.type.DeclaredType;
-import shadow.javax.lang.model.type.TypeVariable;
+import shadow.javax.lang.model.element.*;
+import shadow.javax.lang.model.type.*;
 
 import java.util.*;
 
@@ -38,6 +33,16 @@ public class CompleteMemberSelectAction implements CompletionAction {
 
         Tree parent = path.getParentPath().getParentPath().getLeaf();
         boolean endsWithParen = parent.getKind() == Tree.Kind.METHOD_INVOCATION;
+
+        // when inside a method invocation,
+        // typing a package expression (java.util.something) the compiler infers it to be
+        // an error type. we change the type to a package if it matches any package
+        if (type.getKind() == TypeKind.ERROR) {
+            PackageElement packageElement = task.getElements().getPackageElement(type.toString());
+            if (packageElement != null) {
+                type = packageElement.asType();
+            }
+        }
 
         if (type instanceof ArrayType) {
             return completeArrayMemberSelect(isStatic);
