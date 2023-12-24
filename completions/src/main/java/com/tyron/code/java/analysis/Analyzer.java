@@ -69,7 +69,7 @@ public class Analyzer {
         progressConsumer.accept("1. Getting task from task pool.");
 
         Context context = new Context();
-        JavacTaskImpl javacTask = getJavacTask(path, contents, context);
+        JavacTaskImpl javacTask = getJavacTask(path, contents, context, projectModule);
 
 
         try {
@@ -163,7 +163,7 @@ public class Analyzer {
         }
     }
 
-    private JavacTaskImpl getJavacTask(Path path, String contents, Context context) {
+    private JavacTaskImpl getJavacTask(Path path, String contents, Context context, ProjectModule projectModule) {
         return (JavacTaskImpl) systemProvider.getTask(
                 new PrintWriter(Writer.nullWriter()),
                 moduleFileManager,
@@ -181,6 +181,8 @@ public class Analyzer {
                         "-g:source", // NOI18N, Make the compiler to maintain source file info
                         "-g:lines", // NOI18N, Make the compiler to maintain line table
                         "-g:vars",
+                        "-bootclasspath",
+                        projectModule.getJdkModule().getJarPath().toString(),
                         "-XDbreakDocCommentParsingOnError=false",
                         "-Xlint:cast",
                         "-Xlint:deprecation",
@@ -215,8 +217,6 @@ public class Analyzer {
         public AnalysisResult call() throws Exception {
             synchronized (lock) {
                 checkCancelled();
-
-                Symtab currentSymTab = Symtab.instance(javacTask.getContext());
                 progressConsumer.accept("3. Parsing");
 
                 Iterable<? extends CompilationUnitTree> parsed = javacTask.parse();

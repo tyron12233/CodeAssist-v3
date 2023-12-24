@@ -1,5 +1,6 @@
 package com.tyron.code.java;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.tyron.code.java.parsing.MethodBodyPruner;
 import com.tyron.code.java.parsing.ParserContext;
@@ -72,6 +73,9 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
             return ModuleUtils.getFiles(qualifiers, module).stream()
                     .map(this::asSourceFileObject)
                     ::iterator;
+        }
+        if (location.getClass().toString().contains("Module")) {
+            return ImmutableList.of();
         }
         return super.list(location, packageName, kinds, recurse);
     }
