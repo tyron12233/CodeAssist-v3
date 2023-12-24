@@ -46,4 +46,11 @@ class JarReaderTest {
         );
     }
 
+    @Test
+    public void testGetPackageOnly() {
+        assertEquals(
+                "com.tyron.test",
+                JarReader.getPackageOnly("com.tyron.test.Test")
+        );
+    }
 }
