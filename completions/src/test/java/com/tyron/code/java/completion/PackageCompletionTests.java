@@ -44,4 +44,12 @@ public class PackageCompletionTests extends BaseCompletionTest{
                 """);
         assertThat(complete).contains("List");
     }
+
+    @Test
+    public void testPackageCompletionWorksOnStaticImports() {
+        List<String> complete = complete("""
+                import static java.lang.@complete
+                """);
+        assertThat(complete).isNotEmpty();
+    }
 }
