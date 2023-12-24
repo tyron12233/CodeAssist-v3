@@ -148,7 +148,6 @@ public class CompleteMemberSelectAction implements CompletionAction {
                     }
                 });
         methods.values().stream()
-                .parallel()
                 .map(overloads -> method(analysisResult, overloads, !endsWithParen))
                 .forEach(list::add);
 

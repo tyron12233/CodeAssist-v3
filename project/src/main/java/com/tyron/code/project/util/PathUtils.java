@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.*;
@@ -124,7 +125,7 @@ public class PathUtils {
     }
 
     /** Returns a {@link Path} that can be use for walking through its content. */
-    public static Path getRootPathForJarFile(Path jarFilePath) throws IOException {
+    public static Path getRootPathForJarFile(Path jarFilePath) {
         // JAR specific URI pattern.
         // See https://docs.oracle.com/javase/8/docs/technotes/guides/io/fsp/zipfilesystemprovider.html
         logger.fine("Parsing jar file: " + jarFilePath);
@@ -132,9 +133,14 @@ public class PathUtils {
         try {
             uri = new URI("jar", jarFilePath.toUri().toString(), null);
         } catch (URISyntaxException e) {
-            throw new IOException(e);
+            throw new RuntimeException(e);
         }
-        FileSystem fs = FileSystems.newFileSystem(uri, ImmutableMap.of() /* env */);
+        FileSystem fs = null;
+        try {
+            fs = FileSystems.newFileSystem(uri, ImmutableMap.of() /* env */);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
         return fs.getPath("/");
     }
 }

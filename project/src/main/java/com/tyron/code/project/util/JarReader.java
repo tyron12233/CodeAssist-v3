@@ -13,23 +13,23 @@ public class JarReader {
     public static List<ClassInfo> readJarFile(String jarPath) throws IOException {
         List<ClassInfo> classInfos = new ArrayList<>();
 
-        try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + Paths.get(jarPath).toUri()), Map.of())) {
-            Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (file.toString().endsWith(".class")) {
-                        String classPath = getFqn(file.toString());
-                        String className = getClassName(classPath);
+        FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + Paths.get(jarPath).toUri()), Map.of());
+        Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (file.toString().endsWith(".class")) {
+                    String classPath = getFqn(file.toString());
+                    String className = getClassName(classPath);
 
-                        List<String> qualifiers = getAsQualifierList(getPackageOnly(classPath));
+                    List<String> qualifiers = getAsQualifierList(getPackageOnly(classPath));
 
-                        ClassInfo classInfo = new ClassInfo(qualifiers, className, file);
-                        classInfos.add(classInfo);
-                    }
-                    return FileVisitResult.CONTINUE;
+                    ClassInfo classInfo = new ClassInfo(qualifiers, className, file);
+                    classInfos.add(classInfo);
                 }
-            });
-        }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
 
         return classInfos;
     }

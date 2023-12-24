@@ -17,7 +17,7 @@ public class ModuleUtils {
         CompileProjectModuleBFS compileModuleBFS = new CompileProjectModuleBFS(root);
         compileModuleBFS.traverse(currentNode -> {
             switch (currentNode.getModuleType()) {
-                case JAR_DEPENDENCY -> files.add(((JarModule) currentNode).getJarPath());
+                case JAR_DEPENDENCY, JDK -> files.add(((JarModule) currentNode).getJarPath());
                 case PROJECT -> files.addAll(((ProjectModule) currentNode).getFiles().stream().map(UnparsedJavaFile::path).toList());
             }
         });

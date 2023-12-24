@@ -1,6 +1,5 @@
 package com.tyron.code.java;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.tyron.code.java.parsing.MethodBodyPruner;
 import com.tyron.code.java.parsing.ParserContext;
@@ -9,17 +8,25 @@ import com.tyron.code.project.file.FileSnapshot;
 import com.tyron.code.project.model.JarModule;
 import com.tyron.code.project.model.ProjectModule;
 import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.util.JarReader;
 import com.tyron.code.project.util.ModuleUtils;
 import com.tyron.code.project.util.StringSearch;
 import shadow.com.sun.tools.javac.api.JavacTool;
+import shadow.com.sun.tools.javac.file.JavacFileManager;
+import shadow.com.sun.tools.javac.file.Locations;
+import shadow.com.sun.tools.javac.file.PathFileObject;
 import shadow.com.sun.tools.javac.tree.JCTree;
 import shadow.javax.tools.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -74,8 +81,16 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
                     .map(this::asSourceFileObject)
                     ::iterator;
         }
+
+        // javac modules hack: on JDK 9 and above, javac will attempt to use the module
+        // system but in android we don't use modules, this method will redirect modules into the
+        // android.jar we provided in the classpath
         if (location.getClass().toString().contains("Module")) {
-            return ImmutableList.of();
+            return module.getJdkModule().getPackage(Arrays.stream(packageName.split("\\.")).toList()).stream()
+                    .flatMap(packageScope -> packageScope.getFiles().stream())
+                    .map(c -> new ClassFileObject(c.path(), JavaFileObject.Kind.CLASS))
+                    .map(c -> (JavaFileObject) c)
+                    .toList();
         }
         return super.list(location, packageName, kinds, recurse);
     }
@@ -85,8 +100,26 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         if (location == StandardLocation.SOURCE_PATH) {
             return extractClassName((FileSnapshot) file);
         }
-        return super.inferBinaryName(location, file);
 
+        Objects.requireNonNull(file);
+        Iterable<? extends Path> path = getLocationAsPaths(location);
+        if (path == null) {
+            return null;
+        }
+
+        return ((ClassFileObject) file).inferBinaryName(path);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Iterable<? extends Path> getLocationAsPaths(Location location) {
+        try {
+            Method getLocationAsPaths = JavacFileManager.class.getDeclaredMethod("getLocationAsPaths", Location.class);
+            getLocationAsPaths.setAccessible(true);
+            Object invoke = getLocationAsPaths.invoke(this.fileManager, location);
+            return (Iterable<? extends Path>) invoke;
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e.getCause());
+        }
     }
 
     @SuppressWarnings("UnstableApiUsage")
@@ -131,5 +164,35 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     public void clearCompletingFile() {
         this.completingFile = null;
         this.completingContents = null;
+    }
+
+    private static class ClassFileObject extends SimpleJavaFileObject {
+
+        private final Path jarPath;
+        private final Path pathInside;
+        protected ClassFileObject(Path pathInside, Kind kind) {
+            super(getRootFromJar(pathInside).toUri(), kind);
+
+            this.jarPath = getRootFromJar(pathInside);
+            this.pathInside = pathInside;
+        }
+
+        private static Path getRootFromJar(Path path) {
+            return Paths.get(path.getFileSystem().toString());
+        }
+
+        @Override
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
+            throw new UnsupportedOperationException();
+        }
+
+        public String inferBinaryName(Iterable<? extends Path> paths) {
+            return JarReader.getFqn(pathInside.toString());
+        }
+
+        @Override
+        public InputStream openInputStream() throws IOException {
+            return java.nio.file.Files.newInputStream(pathInside);
+        }
     }
 }
