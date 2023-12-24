@@ -2,16 +2,20 @@ package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.java.analysis.Analyzer;
+import com.tyron.code.java.parsing.AdjustedLineMap;
 import com.tyron.code.java.parsing.FileContentFixer;
+import com.tyron.code.java.parsing.Insertion;
 import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.model.ProjectModule;
 import shadow.com.sun.source.tree.*;
 import shadow.com.sun.source.util.TreePath;
 import shadow.com.sun.tools.javac.tree.JCTree;
+import shadow.com.sun.tools.javac.util.Position;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,7 +60,23 @@ public class Completor {
         LineMap adjustedLineMap = contents.get().getAdjustedLineMap();
         long offset = adjustedLineMap.getPosition(line + 1, column + 1);
 
-        ContentWithLineMap contentWithLineMap = ContentWithLineMap.create(contents.get().getContent(), adjustedLineMap, file);
+        String adjustedContent = contents.get().getContent();
+        char c = adjustedContent.charAt((int) offset - 1);
+        if (!Character.isJavaIdentifierPart(c) && c != '.') {
+            // append dummy identifier so that we can complete in this context
+            Insertion insertion = Insertion.create((int) offset - 1, "dumbIdent");
+            adjustedContent = Insertion.applyInsertions(adjustedContent, List.of(insertion)).toString();
+
+            adjustedLineMap = FileContentFixer.createAdjustedLineMap(
+                    adjustedLineMap,
+                    List.of(insertion)
+            );
+
+            offset = adjustedLineMap.getPosition(line + 1, column);
+        }
+
+
+        ContentWithLineMap contentWithLineMap = ContentWithLineMap.create(adjustedContent, adjustedLineMap, file);
         String prefix = contentWithLineMap.extractCompletionPrefix((int) offset);
 
         System.out.println(prefix);
@@ -90,14 +110,6 @@ public class Completor {
         TextEditOptions.Builder textEditOptions =
                 TextEditOptions.builder().setAppendMethodArgumentSnippets(false);
 
-        // When the cursor is before an opening parenthesis, it's likely the user is
-        // trying to change the name of a method invocation. In this case the
-        // arguments are already there, and we should not append method argument
-        // snippet upon completion.
-//        if ("(".equals(contentWithLineMap.substring(line, column, 1))) {
-//            textEditOptions.setAppendMethodArgumentSnippets(false);
-//        }
-
         CompletableFuture<ImmutableList<CompletionCandidate>> future = new CompletableFuture<>();
 
 
@@ -115,21 +127,7 @@ public class Completor {
 
 
             if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree) {
-                ExpressionTree parentExpression = ((MemberSelectTree) currentAnalyzedPath.getLeaf()).getExpression();
-                Optional<ImportTree> importNode = findNodeOfType(currentAnalyzedPath, ImportTree.class);
-                if (importNode.isPresent()) {
-//                if (importNode.get().isStatic()) {
-//                    action =
-//                            CompleteMemberAction.forImportStatic(parentExpression, typeSolver, expressionSolver);
-//                } else {
-//                    action = CompleteMemberAction.forImport(parentExpression, typeSolver, expressionSolver);
-//                }
-                    action = null;
-
-                } else {
-                    action = new CompleteMemberSelectAction();
-                    textEditOptions.setAppendMethodArgumentSnippets(true);
-                }
+                action = new CompleteMemberSelectAction();
             } else if (currentAnalyzedPath.getLeaf() instanceof IdentifierTree) {
                 action = new CompleteSymbolAction();
             } else {

@@ -135,7 +135,6 @@ public class CompleteMemberSelectAction implements CompletionAction {
         var methods = new HashMap<String, List<ExecutableElement>>();
 
         task.getElements().getAllMembers(typeElement).stream()
-                .parallel()
                 .filter(member -> member.getKind() != ElementKind.CONSTRUCTOR)
                 .filter(member -> CompletionPrefixUtils.prefixPartiallyMatch(partial, member.getSimpleName().toString()))
                 .filter(member -> trees.isAccessible(scope, member, type))
@@ -147,6 +146,7 @@ public class CompleteMemberSelectAction implements CompletionAction {
                         list.add(new ElementCompletionCandidate(member));
                     }
                 });
+
         methods.values().stream()
                 .map(overloads -> method(analysisResult, overloads, !endsWithParen))
                 .forEach(list::add);

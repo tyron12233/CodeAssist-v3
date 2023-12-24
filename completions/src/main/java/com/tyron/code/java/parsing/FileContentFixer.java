@@ -47,6 +47,7 @@ public class FileContentFixer {
                 }
             }
         }
+
         CharSequence modifiedContent = Insertion.applyInsertions(content, insertions);
         return FixedContent.create(
                 modifiedContent, createAdjustedLineMap(scanner.getLineMap(), insertions));
@@ -92,8 +93,8 @@ public class FileContentFixer {
         }
     }
 
-    private AdjustedLineMap createAdjustedLineMap(
-            LineMap originalLineMap, List<Insertion> insertions) {
+    public static AdjustedLineMap createAdjustedLineMap(
+            shadow.com.sun.source.tree.LineMap originalLineMap, List<Insertion> insertions) {
         return new AdjustedLineMap.Builder()
                 .setOriginalLineMap(originalLineMap)
                 .addInsertions(insertions)

@@ -5,9 +5,9 @@ import com.google.common.collect.Ordering;
 import java.util.List;
 
 @AutoValue
-abstract class Insertion {
+public abstract class Insertion {
     private static final Ordering<Insertion> REVERSE_INSERTION =
-            Ordering.natural().onResultOf((Insertion insertion) -> insertion.getPos()).reverse();
+            Ordering.natural().onResultOf(Insertion::getPos).reverse();
 
     public abstract int getPos();
 

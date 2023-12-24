@@ -13,6 +13,7 @@ public class JarReader {
     public static List<ClassInfo> readJarFile(String jarPath) throws IOException {
         List<ClassInfo> classInfos = new ArrayList<>();
 
+
         FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + Paths.get(jarPath).toUri()), Map.of());
         Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<>() {
             @Override
