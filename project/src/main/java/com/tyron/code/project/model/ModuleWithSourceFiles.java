@@ -20,6 +20,26 @@ public class ModuleWithSourceFiles extends Module {
         getOrCreatePackage(unparsedJavaFile.qualifiers()).addFile(unparsedJavaFile);
     }
 
+    public Optional<PackageScope> getPackage(List<String> qualifiers) {
+        // root package
+        if (qualifiers.isEmpty()) {
+            return Optional.of(rootPackage);
+        }
+
+        List<String> currentQualifiers = new ArrayList<>();
+        PackageScope currentPackage = rootPackage;
+        for (String qualifier : qualifiers) {
+            Optional<PackageScope> packageScope = getPackageScope(qualifier, currentPackage);
+            if (packageScope.isPresent()) {
+                currentPackage = packageScope.get();
+            } else {
+                return Optional.empty();
+            }
+            currentQualifiers.add(qualifier);
+        }
+        return Optional.of(currentPackage);
+    }
+
     public synchronized PackageScope getOrCreatePackage(List<String> packageQualifiers) {
 
         // root package

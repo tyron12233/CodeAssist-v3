@@ -12,8 +12,6 @@ import shadow.com.sun.source.util.TreePathScanner;
 import shadow.com.sun.tools.javac.tree.EndPosTable;
 import shadow.com.sun.tools.javac.tree.JCTree;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -33,7 +31,7 @@ public abstract class PositionContext {
      * content may be different from the original content of the file. So this position can not be
      * used in the context of the original position.
      */
-    public abstract int getPosition();
+    public abstract long getPosition();
 
     public abstract EndPosTable getEndPosTable();
 
@@ -111,7 +109,11 @@ public abstract class PositionContext {
                 return ret;
             }
 
-            return (tree instanceof ErroneousTree) ? null : currentPath;
+            if (tree instanceof ErroneousTree erroneousTree) {
+                System.out.println(erroneousTree);
+                return null;
+            }
+            return currentPath;
         }
 
         @Override

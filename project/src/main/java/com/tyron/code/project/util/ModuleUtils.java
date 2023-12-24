@@ -1,6 +1,5 @@
 package com.tyron.code.project.util;
 
-import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.graph.CompileProjectModuleBFS;
 import com.tyron.code.project.graph.ModuleFileCollectorVisitor;
 import com.tyron.code.project.model.*;
@@ -35,5 +34,12 @@ public class ModuleUtils {
         ModuleFileCollectorVisitor visitor = new ModuleFileCollectorVisitor();
         compileModuleBFS.traverse(visitor);
         return visitor.getAllFiles();
+    }
+
+    public static List<Module> getDependenciesRecursive(ProjectModule module) {
+        List<Module> modules = new ArrayList<>();
+        CompileProjectModuleBFS compileProjectModuleBFS = new CompileProjectModuleBFS(module);
+        compileProjectModuleBFS.traverse(modules::add);
+        return modules;
     }
 }

@@ -1,7 +1,11 @@
 package com.tyron.code.desktop;
 
+import com.tyron.code.desktop.completion.candidates.MethodCompletionCandidate;
+import com.tyron.code.java.analysis.Analyzer;
+import com.tyron.code.java.completion.CompletionCandidate;
 import com.tyron.code.java.completion.CompletionResult;
 import com.tyron.code.java.completion.Completor;
+import com.tyron.code.java.completion.ElementCompletionCandidate;
 import com.tyron.code.project.FileSystemModuleManager;
 import com.tyron.code.project.file.SimpleFileManager;
 import com.tyron.code.project.model.JarModule;
@@ -18,6 +22,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -40,20 +46,26 @@ public class TestEditor extends JFrame {
     public TestEditor() {
         setupTestProject();
 
-        completor = new Completor(simpleFileManager);
+        completor = new Completor(simpleFileManager, new Analyzer(simpleFileManager, projectModule, (message) -> {
+            System.out.println(message);
+        }));
 
         JPanel contentPane = new JPanel(new BorderLayout());
         textArea = new RSyntaxTextArea(20, 60);
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
         textArea.setCodeFoldingEnabled(true);
+
         contentPane.add(new RTextScrollPane(textArea));
 
         CompletionProvider provider = createCompletionProvider();
+
 
         AutoCompletion ac = new AutoCompletion(provider);
         ac.install(textArea);
         ac.setAutoCompleteEnabled(true);
         ac.setAutoActivationEnabled(true);
+        ac.setAutoCompleteSingleChoices(false);
+        ac.setListCellRenderer(new CompletionCellRenderer());
 
         setContentPane(contentPane);
         setTitle("Test.java");
@@ -105,7 +117,13 @@ public class TestEditor extends JFrame {
             List<JarReader.ClassInfo> infos = JarReader.readJarFile(androidJar.toString());
             infos.stream().map(it -> new UnparsedJavaFile(jdkModule, androidJar, it.getClassName(), it.getPackageQualifiers())).forEach(jdkModule::addClass);
 
+            Path commonsJar = Paths.get("/home/tyronscott/Downloads/guava-33.0.0-jre.jar");
+            JarModule commonsJarModule = JarModule.createJarDependency(commonsJar);
+            List<JarReader.ClassInfo> commonsInfos = JarReader.readJarFile(commonsJar.toString());
+            commonsInfos.stream().map(it -> new UnparsedJavaFile(commonsJarModule, commonsJar, it.getClassName(), it.getPackageQualifiers())).forEach(commonsJarModule::addClass);
+
             projectModule.addJdkDependency(jdkModule);
+            projectModule.addImplementationDependency(commonsJarModule);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -160,8 +178,6 @@ public class TestEditor extends JFrame {
 
         @Override
         public List<Completion> getCompletions(JTextComponent comp) {
-            Cursor cursor = comp.getCursor();
-
             int caretPosition = comp.getCaretPosition();
             int line;
             int column;
@@ -176,11 +192,28 @@ public class TestEditor extends JFrame {
 
             CompletionResult completionResult = completor.getCompletionResult(projectModule, editingFile, line, column);
 
-            return completionResult.getCompletionCandidates().stream()
-                    .map(candidate -> {
-                        return (Completion) new BasicCompletion(this, candidate.getName());
-                    })
+            List<Completion> list = completionResult.getCompletionCandidates().stream()
+                    .map(this::getCompletion)
                     .toList();
+            System.out.println(list);
+            return list;
+        }
+
+        private Completion getCompletion(CompletionCandidate candidate) {
+            if (!(candidate instanceof ElementCompletionCandidate elementCompletionCandidate)) {
+                return new BasicCompletion(this, candidate.getName());
+            }
+
+            CompletionCandidate.Kind kind = elementCompletionCandidate.getKind();
+            if (kind != CompletionCandidate.Kind.METHOD) {
+                return new BasicCompletion(this, candidate.getName());
+            }
+
+            return new FunctionCompletion(
+                    this,
+                    elementCompletionCandidate.getName(),
+                    elementCompletionCandidate.getDetail().orElse("")
+            );
         }
 
         @Override

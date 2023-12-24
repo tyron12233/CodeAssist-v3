@@ -2,10 +2,17 @@ package com.tyron.code.java.completion;
 
 import shadow.javax.lang.model.element.Element;
 import shadow.javax.lang.model.element.ElementKind;
+import shadow.javax.lang.model.element.ExecutableElement;
+import shadow.javax.lang.model.element.TypeElement;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class ElementCompletionCandidate extends ElementBasedCompletionCandidate {
+
+    private final Map<String, Object> objectsMap = new HashMap<>();
 
     ElementCompletionCandidate(Element element) {
         super(element);
@@ -23,7 +30,27 @@ public class ElementCompletionCandidate extends ElementBasedCompletionCandidate 
 
     @Override
     public Optional<String> getDetail() {
+        if (getElement().getKind() == ElementKind.METHOD) {
+            ExecutableElement executableElement = ((ExecutableElement) getElement());
+            return Optional.of(executableElement.getParameters().toString());
+        }
         return Optional.empty();
+    }
+
+    public boolean getBoolean(String name) {
+        Object o = objectsMap.get(name);
+        if (o == null) {
+            return false;
+        }
+        return (boolean) o;
+    }
+
+    public String getString(String name) {
+        return (String) objectsMap.get(name);
+    }
+
+    public <T> void putData(String name, T value) {
+        objectsMap.put(name, value);
     }
 
     public static Kind toCandidateKind(ElementKind elementKind) {

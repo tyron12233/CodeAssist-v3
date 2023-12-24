@@ -26,7 +26,7 @@ public interface CompletionCandidate {
      * <p>SortCategory values are compared using their ordinal values. Do not change the order of the
      * values unless there is a good reason.
      */
-    public enum SortCategory {
+    enum SortCategory {
         /** A member name defined by the class of the instance. */
         DIRECT_MEMBER,
         /** A symbol name that's visible in the given scope. */

@@ -17,11 +17,11 @@ import java.util.logging.Logger;
  */
 @AutoValue
 abstract class ContentWithLineMap {
-    public static ContentWithLineMap create(PositionContext positionContext) {
+    public static ContentWithLineMap create(String content, LineMap lineMap, Path path) {
         return new AutoValue_ContentWithLineMap(
-                positionContext.getContent(),
-                positionContext.getTreePath().getCompilationUnit().getLineMap(),
-                positionContext.getPath()
+                content,
+                lineMap,
+                path
         );
     }
 
@@ -34,20 +34,7 @@ abstract class ContentWithLineMap {
     abstract Path getFilePath();
 
     /** Gets the content before cursor position (line, column) as prefix for completion. */
-    String extractCompletionPrefix(int line, int column) {
-        int position = LineMapUtil.getPositionFromZeroBasedLineAndColumn(getLineMap(), line, column);
-//        if (position < 0) {
-//            logger.warning(
-//                    "Position of (%s, %s): %s is negative when getting completion prefix for file %s",
-//                    line, column, position, getFilePath());
-//        }
-//        if (position >= getContent().length()) {
-//            logger.warning(
-//                    "Position of (%s, %s): %s is greater than the length of the content %s when "
-//                            + "getting completion prefix for file %s",
-//                    line, column, position, getContent().length(), getFilePath());
-//        }
-
+    String extractCompletionPrefix(int position) {
         int start = position - 1;
         while (start >= 0 && Character.isJavaIdentifierPart(getContent().charAt(start))) {
             start--;

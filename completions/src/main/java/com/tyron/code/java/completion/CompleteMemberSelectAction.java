@@ -2,11 +2,17 @@ package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.java.analysis.AnalysisResult;
+import com.tyron.code.project.model.*;
+import com.tyron.code.project.model.Module;
+import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.util.ModuleUtils;
 import shadow.com.sun.source.tree.MemberSelectTree;
 import shadow.com.sun.source.tree.Scope;
+import shadow.com.sun.source.tree.Tree;
 import shadow.com.sun.source.util.TreePath;
 import shadow.com.sun.source.util.Trees;
 import shadow.com.sun.tools.javac.api.JavacTaskImpl;
+import shadow.com.sun.tools.javac.code.Type;
 import shadow.javax.lang.model.element.ElementKind;
 import shadow.javax.lang.model.element.ExecutableElement;
 import shadow.javax.lang.model.element.Modifier;
@@ -15,10 +21,7 @@ import shadow.javax.lang.model.type.ArrayType;
 import shadow.javax.lang.model.type.DeclaredType;
 import shadow.javax.lang.model.type.TypeVariable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class CompleteMemberSelectAction implements CompletionAction {
     @Override
@@ -32,33 +35,95 @@ public class CompleteMemberSelectAction implements CompletionAction {
         var isStatic = trees.getElement(path) instanceof TypeElement;
         var scope = trees.getScope(path);
         var type = trees.getTypeMirror(path);
+
+        Tree parent = path.getParentPath().getParentPath().getLeaf();
+        boolean endsWithParen = parent.getKind() == Tree.Kind.METHOD_INVOCATION;
+
         if (type instanceof ArrayType) {
             return completeArrayMemberSelect(isStatic);
         } else if (type instanceof TypeVariable) {
-            return completeTypeVariableMemberSelect(args.analysisResult(), scope, (TypeVariable) type, isStatic, args.prefix(), false);
+            return completeTypeVariableMemberSelect(
+                    args.analysisResult(),
+                    scope,
+                    (TypeVariable) type,
+                    isStatic,
+                    args.prefix(),
+                    endsWithParen
+            );
         } else if (type instanceof DeclaredType) {
-            return completeDeclaredTypeMemberSelect(args.analysisResult(), scope, (DeclaredType) type, isStatic, args.prefix(), false);
-        } else {
-            return ImmutableList.of();
+            return completeDeclaredTypeMemberSelect(
+                    args.analysisResult(),
+                    scope,
+                    (DeclaredType) type,
+                    isStatic,
+                    args.prefix(),
+                    endsWithParen
+            );
+        } else if (type instanceof Type.PackageType) {
+            return completePackage(
+                    args.analysisResult(),
+                    scope,
+                    (Type.PackageType) type,
+                    args.prefix()
+            );
         }
+
+        return ImmutableList.of();
+    }
+
+    private ImmutableList<CompletionCandidate> completePackage(AnalysisResult analysisResult, Scope scope, Type.PackageType type, String prefix) {
+        ProjectModule module = analysisResult.module();
+        List<Module> dependenciesRecursive = ModuleUtils.getDependenciesRecursive(module);
+
+        List<String> asQualifierList = JarReader.getAsQualifierList(type.toString());
+        List<PackageScope> packageScopes = dependenciesRecursive.stream()
+                .filter(dependency -> dependency instanceof ModuleWithSourceFiles)
+                .map(dependency -> (ModuleWithSourceFiles) dependency)
+                .flatMap(dependency -> dependency.getPackage(asQualifierList).stream())
+                .filter(Objects::nonNull)
+                .toList();
+
+        ImmutableList.Builder<CompletionCandidate> builder = ImmutableList.builder();
+        for (PackageScope packageScope : packageScopes) {
+            Set<UnparsedJavaFile> files = packageScope.getFiles();
+            List<PackageScope> subPackages = packageScope.getSubPackages();
+
+            files.stream().map(it -> new SimpleCompletionCandidate(it.fileName())).forEach(builder::add);
+            subPackages.stream().map(it -> new SimpleCompletionCandidate(it.getSimpleName())).forEach(builder::add);
+        }
+        return builder.build();
     }
 
     private ImmutableList<CompletionCandidate> completeArrayMemberSelect(boolean isStatic) {
         if (isStatic) {
             return ImmutableList.of();
-        } else {
-            return ImmutableList.of(KeywordCompletionCandidate.LENGTH);
         }
+
+        return ImmutableList.of(KeywordCompletionCandidate.LENGTH);
     }
 
     private ImmutableList<CompletionCandidate> completeTypeVariableMemberSelect(AnalysisResult analysisResult, Scope scope, TypeVariable type, boolean isStatic, String partial, boolean endsWithParen) {
         if (type.getUpperBound() instanceof DeclaredType) {
-            return completeDeclaredTypeMemberSelect(analysisResult, scope, (DeclaredType) type.getUpperBound(), isStatic, partial, endsWithParen);
+            return completeDeclaredTypeMemberSelect(
+                    analysisResult,
+                    scope,
+                    (DeclaredType) type.getUpperBound(),
+                    isStatic,
+                    partial,
+                    endsWithParen
+            );
         } else if (type.getUpperBound() instanceof TypeVariable) {
-            return completeTypeVariableMemberSelect(analysisResult, scope, (TypeVariable) type.getUpperBound(), isStatic, partial, endsWithParen);
-        } else {
-            return ImmutableList.of();
+            return completeTypeVariableMemberSelect(
+                    analysisResult,
+                    scope,
+                    (TypeVariable) type.getUpperBound(),
+                    isStatic,
+                    partial,
+                    endsWithParen
+            );
         }
+
+        return ImmutableList.of();
     }
 
     private ImmutableList<CompletionCandidate> completeDeclaredTypeMemberSelect(
@@ -68,24 +133,29 @@ public class CompleteMemberSelectAction implements CompletionAction {
         var typeElement = (TypeElement) type.asElement();
         var list = new ArrayList<CompletionCandidate>();
         var methods = new HashMap<String, List<ExecutableElement>>();
-        for (var member : task.getElements().getAllMembers(typeElement)) {
-            if (member.getKind() == ElementKind.CONSTRUCTOR) continue;
-//            if (!StringSearch.matchesPartialName(member.getSimpleName(), partial)) continue;
-            if (!trees.isAccessible(scope, member, type)) continue;
-            if (isStatic != member.getModifiers().contains(Modifier.STATIC)) continue;
-            if (member.getKind() == ElementKind.METHOD) {
-                putMethod((ExecutableElement) member, methods);
-            } else {
-                list.add(new ElementCompletionCandidate(member));
-            }
-        }
 
-        for (var overloads : methods.values()) {
-            list.add(method(analysisResult, overloads, !endsWithParen));
-        }
+        task.getElements().getAllMembers(typeElement).stream()
+                .parallel()
+                .filter(member -> member.getKind() != ElementKind.CONSTRUCTOR)
+                .filter(member -> CompletionPrefixUtils.prefixPartiallyMatch(partial, member.getSimpleName().toString()))
+                .filter(member -> trees.isAccessible(scope, member, type))
+                .filter(member -> isStatic == member.getModifiers().contains(Modifier.STATIC))
+                .forEach(member -> {
+                    if (member.getKind() == ElementKind.METHOD) {
+                        putMethod((ExecutableElement) member, methods);
+                    } else {
+                        list.add(new ElementCompletionCandidate(member));
+                    }
+                });
+        methods.values().stream()
+                .parallel()
+                .map(overloads -> method(analysisResult, overloads, !endsWithParen))
+                .forEach(list::add);
+
         if (isStatic) {
             list.add(KeywordCompletionCandidate.CLASS);
         }
+
         if (isStatic && isEnclosingClass(type, scope)) {
             list.add(KeywordCompletionCandidate.THIS);
             list.add(KeywordCompletionCandidate.SUPER);
@@ -123,6 +193,8 @@ public class CompleteMemberSelectAction implements CompletionAction {
 
     private CompletionCandidate method(AnalysisResult analysisResult, List<ExecutableElement> overloads, boolean addParens) {
         var first = overloads.get(0);
-        return new ElementCompletionCandidate(first);
+        ElementCompletionCandidate candidate = new ElementCompletionCandidate(first);
+        candidate.putData("ADD_PARENS", false);
+        return candidate;
     }
 }

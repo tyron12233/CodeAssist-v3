@@ -13,17 +13,15 @@ public class JarReader {
     public static List<ClassInfo> readJarFile(String jarPath) throws IOException {
         List<ClassInfo> classInfos = new ArrayList<>();
 
-        // Create a zip file system to access the JAR file
         try (FileSystem fs = FileSystems.newFileSystem(URI.create("jar:" + Paths.get(jarPath).toUri()), Map.of())) {
             Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                     if (file.toString().endsWith(".class")) {
                         String classPath = getFqn(file.toString());
                         String className = getClassName(classPath);
 
-
-                        List<String> qualifiers = getAsQualifierList(classPath);
+                        List<String> qualifiers = getAsQualifierList(classPath.substring(0, className.length() + ".class".length()));
 
                         ClassInfo classInfo = new ClassInfo();
                         classInfo.setPackageQualifiers(qualifiers);
@@ -59,7 +57,6 @@ public class JarReader {
         return fqn.substring(fqn.lastIndexOf('.') + 1);
     }
 
-    @VisibleForTesting
     public static List<String> getAsQualifierList(String className) {
         List<String> qualifiers = Arrays.stream(className.split("\\.")).toList();
         if (qualifiers.isEmpty()) {

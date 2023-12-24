@@ -7,10 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,6 +41,9 @@ public class FileSnapshot extends SimpleJavaFileObject {
      * content.
      */
     public static FileSnapshot create(URI fileUri, String content) {
+        if (fileUri.toString().contains("Another")) {
+            System.out.println();
+        }
         return new FileSnapshot(fileUri, content);
     }
 
@@ -99,6 +99,19 @@ public class FileSnapshot extends SimpleJavaFileObject {
         this.content = new StringBuilder(newText);
 
         remapLines();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FileSnapshot that)) return false;
+
+        return Objects.equals(uri, that.uri);
+    }
+
+    @Override
+    public int hashCode() {
+        return uri != null ? uri.hashCode() : 0;
     }
 
     private int getPositionOffset(TextPosition position) {

@@ -27,10 +27,15 @@ public class PackageScope {
         this.simpleName = simpleName;
         this.subPackages = ArrayListMultimap.create();
         this.files = new HashSet<>();
+
     }
 
     public List<PackageScope> getSubPackages(String name) {
         return ImmutableList.copyOf(subPackages.get(name));
+    }
+
+    public List<PackageScope> getSubPackages() {
+        return ImmutableList.copyOf(subPackages.values());
     }
 
     public void addPackage(PackageScope newPackageScope) {

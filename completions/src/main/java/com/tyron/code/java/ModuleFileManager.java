@@ -19,15 +19,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFileManager> {
 
     private static final Logger LOG = Logger.getLogger("main");
+    private Path completingFile;
+    private String completingContents;
 
     private static StandardJavaFileManager createDelegateFileManager() {
         var compiler = JavacTool.create();
@@ -98,11 +97,14 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     private JavaFileObject asSourceFileObject(UnparsedJavaFile unparsedJavaFile) {
         Path path = unparsedJavaFile.path();
 
-        CharSequence content = projectFileManager.getFileContent(path)
-                .map(contents -> pruneMethodBodiesIfNeeded(path, contents))
-                .orElse("");
 
-        return FileSnapshot.create(path.toUri(), content.toString());
+        String content = Optional.ofNullable(completingFile.equals(path) ? completingFile : null)
+                .map(it -> completingContents)
+                .orElse(projectFileManager.getFileContent(path)
+                        .map(contents -> pruneMethodBodiesIfNeeded(path, contents))
+                        .orElse("").toString());
+
+        return FileSnapshot.create(path.toUri(), content);
     }
 
     private CharSequence pruneMethodBodiesIfNeeded(Path path, CharSequence content) {
@@ -114,5 +116,16 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         }
 
         return content;
+    }
+
+    public void setCompletingFile(Path path, String contents) {
+
+        this.completingFile = path;
+        this.completingContents = contents;
+    }
+
+    public void clearCompletingFile() {
+        this.completingFile = null;
+        this.completingContents = null;
     }
 }

@@ -2,7 +2,8 @@ package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.java.analysis.Analyzer;
-import com.tyron.code.java.parsing.PositionContext;
+import com.tyron.code.java.parsing.FileContentFixer;
+import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.model.ProjectModule;
 import shadow.com.sun.source.tree.*;
@@ -29,9 +30,11 @@ public class Completor {
     private CompletionResult cachedCompletion = NO_CACHE;
 
     private final FileManager fileManager;
+    private final Analyzer analyzer;
 
-    public Completor(FileManager fileManager) {
+    public Completor(FileManager fileManager, Analyzer analyzer) {
         this.fileManager = fileManager;
+        this.analyzer = analyzer;
     }
 
     public CompletionResult getCompletionResult(ProjectModule module, Path file, int line, int column) {
@@ -41,92 +44,118 @@ public class Completor {
         // Decreasing column by 1 will decrease position by 1, which makes
         // adjustedPosition == node's endPosition - 1 if the node is just before the actual position.
         int contextColumn = column > 0 ? column - 1 : 0;
-        Optional<PositionContext> positionContext =
-                PositionContext.createForPosition(fileManager, module, file, line, contextColumn);
-        if (positionContext.isEmpty()) {
-            return CompletionResult.builder()
-                    .setCompletionCandidates(ImmutableList.of())
-                    .setLine(line)
-                    .setColumn(column)
-                    .setPrefix("")
-                    .setFilePath(file)
-                    .build();
+
+        FileContentFixer fileContentFixer = new FileContentFixer(new ParserContext());
+
+        Optional<FileContentFixer.FixedContent> contents = fileManager.getFileContent(file)
+                .map(fileContentFixer::fixFileContent);
+        if (contents.isEmpty()) {
+            return NO_CACHE;
         }
 
-        ContentWithLineMap contentWithLineMap =
-                ContentWithLineMap.create(positionContext.get());
-        String prefix = contentWithLineMap.extractCompletionPrefix(line, column);
+        LineMap adjustedLineMap = contents.get().getAdjustedLineMap();
+        long offset = adjustedLineMap.getPosition(line + 1, column + 1);
+
+        ContentWithLineMap contentWithLineMap = ContentWithLineMap.create(contents.get().getContent(), adjustedLineMap, file);
+        String prefix = contentWithLineMap.extractCompletionPrefix((int) offset);
+
+        System.out.println(prefix);
+
         // TODO: limit the number of the candidates.
         if (cachedCompletion.isIncrementalCompletion(file, line, column, prefix)) {
             return getCompletionCandidatesFromCache(line, column, prefix);
         } else {
             cachedCompletion =
-                    computeCompletionResult(positionContext.get(), contentWithLineMap, line, column, prefix);
+                    computeCompletionResult(
+                            file,
+                            contentWithLineMap.getContent().toString(),
+                            module,
+                            line,
+                            column,
+                            ((int) offset),
+                            prefix
+                    );
             return cachedCompletion;
         }
     }
 
     private CompletionResult computeCompletionResult(
-            PositionContext positionContext,
-            ContentWithLineMap contentWithLineMap,
+            Path file,
+            String fixedContents,
+            ProjectModule module,
             int line,
             int column,
+            int offset,
             String prefix) {
-        TreePath treePath = positionContext.getTreePath();
-        CompletionAction action;
         TextEditOptions.Builder textEditOptions =
                 TextEditOptions.builder().setAppendMethodArgumentSnippets(false);
 
-        if (treePath.getLeaf() instanceof MemberSelectTree) {
-            ExpressionTree parentExpression = ((MemberSelectTree) treePath.getLeaf()).getExpression();
-            Optional<ImportTree> importNode = findNodeOfType(treePath, ImportTree.class);
-            if (importNode.isPresent()) {
+        // When the cursor is before an opening parenthesis, it's likely the user is
+        // trying to change the name of a method invocation. In this case the
+        // arguments are already there, and we should not append method argument
+        // snippet upon completion.
+//        if ("(".equals(contentWithLineMap.substring(line, column, 1))) {
+//            textEditOptions.setAppendMethodArgumentSnippets(false);
+//        }
+
+        CompletableFuture<ImmutableList<CompletionCandidate>> future = new CompletableFuture<>();
+
+
+        analyzer.analyze(file, fixedContents, module, analysisResult -> {
+            JCTree.JCCompilationUnit jcCompilationUnit = (JCTree.JCCompilationUnit) analysisResult.parsedTree();
+            analyzer.checkCancelled();
+
+            FindCompletionsAt findCompletionsAt = new FindCompletionsAt(analysisResult.javacTask());
+            TreePath currentAnalyzedPath = findCompletionsAt.scan(jcCompilationUnit, (long) offset);
+            CompletionArgs args = new CompletionArgs(null, module, currentAnalyzedPath, analysisResult, prefix);
+            analyzer.checkCancelled();
+
+
+            CompletionAction action;
+
+
+            if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree) {
+                ExpressionTree parentExpression = ((MemberSelectTree) currentAnalyzedPath.getLeaf()).getExpression();
+                Optional<ImportTree> importNode = findNodeOfType(currentAnalyzedPath, ImportTree.class);
+                if (importNode.isPresent()) {
 //                if (importNode.get().isStatic()) {
 //                    action =
 //                            CompleteMemberAction.forImportStatic(parentExpression, typeSolver, expressionSolver);
 //                } else {
 //                    action = CompleteMemberAction.forImport(parentExpression, typeSolver, expressionSolver);
 //                }
-                action = null;
+                    action = null;
 
+                } else {
+                    action = new CompleteMemberSelectAction();
+                    textEditOptions.setAppendMethodArgumentSnippets(true);
+                }
+            } else if (currentAnalyzedPath.getLeaf() instanceof IdentifierTree) {
+                action = new CompleteSymbolAction();
             } else {
-                action = new CompleteMemberSelectAction();
-                textEditOptions.setAppendMethodArgumentSnippets(true);
+                action = null;
             }
-        } else if (treePath.getLeaf() instanceof IdentifierTree) {
-            action = new CompleteSymbolAction();
-        } else {
-            action = null;
-        }
-        if (action == null) {
-            return NO_CACHE;
-        }
 
-        // When the cursor is before an opening parenthesis, it's likely the user is
-        // trying to change the name of a method invocation. In this case the
-        // arguments are already there, and we should not append method argument
-        // snippet upon completion.
-        if ("(".equals(contentWithLineMap.substring(line, column, 1))) {
-            textEditOptions.setAppendMethodArgumentSnippets(false);
-        }
+            if (action == null) {
+                future.complete(ImmutableList.of());
+                return;
+            }
 
-        CompletableFuture<ImmutableList<CompletionCandidate>> future = new CompletableFuture<>();
 
-        Analyzer analyzer = new Analyzer();
-        analyzer.analyze(positionContext.getPath(), positionContext.getContent().toString(), fileManager, positionContext.getModule(), analysisResult -> {
-            JCTree.JCCompilationUnit jcCompilationUnit = (JCTree.JCCompilationUnit) analysisResult.parsedTree();
-            PositionContext.PositionAstScanner scanner = new PositionContext.PositionAstScanner(jcCompilationUnit.endPositions, positionContext.getPosition());
-            TreePath currentAnalyzedPath = scanner.scan(analysisResult.parsedTree(), null);
-            CompletionArgs args = new CompletionArgs(positionContext, currentAnalyzedPath, analysisResult, prefix);
-            ImmutableList<CompletionCandidate> candidates = action.getCompletionCandidates(args);
-            future.complete(candidates);
+            try {
+                ImmutableList<CompletionCandidate> candidates = action.getCompletionCandidates(args);
+                future.complete(candidates);
+            } catch (ClassCastException e) {
+                System.out.println(e);
+                future.complete(ImmutableList.of());
+            }
         });
 
 
         ImmutableList<CompletionCandidate> candidates =
                 future.join();
         return CompletionResult.builder()
-                .setFilePath(contentWithLineMap.getFilePath())
+                .setFilePath(file)
                 .setLine(line)
                 .setColumn(column)
                 .setPrefix(prefix)
