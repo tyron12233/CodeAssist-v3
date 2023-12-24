@@ -1,6 +1,6 @@
 package com.tyron.code.project.util;
 
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.IOException;
 import java.net.URI;
@@ -19,19 +19,15 @@ public class JarReader {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".class")) {
-                        String classPath = file.toString().replace("/", ".");
-                        String className = classPath.substring(0, classPath.length() - ".class".length());
+                        String classPath = getFqn(file.toString());
+                        String className = getClassName(classPath);
 
 
-                        String packageQualifiers = getPackageQualifiers(className);
-                        List<String> list = Arrays.stream(packageQualifiers.split("\\.")).toList();
-                        if (packageQualifiers.isEmpty()) {
-                            list = Collections.emptyList();
-                        }
+                        List<String> qualifiers = getAsQualifierList(classPath);
 
                         ClassInfo classInfo = new ClassInfo();
-                        classInfo.setPackageQualifiers(list);
-                        classInfo.setClassName(className.substring(packageQualifiers.length() + 1));
+                        classInfo.setPackageQualifiers(qualifiers);
+                        classInfo.setClassName(className);
                         classInfos.add(classInfo);
                     }
                     return FileVisitResult.CONTINUE;
@@ -42,9 +38,42 @@ public class JarReader {
         return classInfos;
     }
 
-    private static String getPackageQualifiers(String className) {
-        int lastDotIndex = className.lastIndexOf('.');
-        return lastDotIndex != -1 ? className.substring(0, lastDotIndex) : "";
+    /**
+     * Returns the Fully Qualified Name of a classpath
+     */
+    @VisibleForTesting
+    public static String getFqn(String path) {
+        String classPath = path.replace("/", ".");
+        if (classPath.startsWith(".")) {
+            classPath = classPath.substring(1);
+        }
+        return classPath.substring(0, classPath.length() - ".class".length());
+    }
+
+    @VisibleForTesting
+    public static String getClassName(String fqn) {
+        if (!fqn.contains(".")) {
+            return fqn;
+        }
+
+        return fqn.substring(fqn.lastIndexOf('.') + 1);
+    }
+
+    @VisibleForTesting
+    public static List<String> getAsQualifierList(String className) {
+        List<String> qualifiers = Arrays.stream(className.split("\\.")).toList();
+        if (qualifiers.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> validQualifiers = new ArrayList<>(qualifiers.size());
+        for (String qualifier : qualifiers) {
+            if (qualifier.isEmpty()) {
+                continue;
+            }
+
+            validQualifiers.add(qualifier);
+        }
+        return validQualifiers;
     }
 
     public static class ClassInfo {
