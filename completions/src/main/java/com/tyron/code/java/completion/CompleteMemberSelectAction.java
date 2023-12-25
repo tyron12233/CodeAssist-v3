@@ -150,8 +150,12 @@ public class CompleteMemberSelectAction implements CompletionAction {
                 .filter(member -> member.getKind() != ElementKind.CONSTRUCTOR)
                 .filter(member -> CompletionPrefixUtils.prefixPartiallyMatch(partial, member.getSimpleName().toString()))
                 .filter(member -> trees.isAccessible(scope, member, type))
-                .filter(member -> isStatic == member.getModifiers().contains(Modifier.STATIC))
                 .forEach(member -> {
+                    if (isStatic) {
+                        if (!member.getModifiers().contains(Modifier.STATIC)) {
+                            return;
+                        }
+                     }
                     if (member.getKind() == ElementKind.METHOD) {
                         putMethod((ExecutableElement) member, methods);
                     } else {
