@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 public class Completor {
@@ -122,15 +123,7 @@ public class Completor {
             CompletionArgs args = new CompletionArgs(null, module, currentAnalyzedPath, analysisResult, prefix);
             analyzer.checkCancelled();
 
-
-            CompletionAction action;
-            if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree || currentAnalyzedPath.getLeaf() instanceof ImportTree importTree) {
-                action = new CompleteMemberSelectAction();
-            } else if (currentAnalyzedPath.getLeaf() instanceof IdentifierTree) {
-                action = new CompleteSymbolAction();
-            } else {
-                action = null;
-            }
+            CompletionAction action = getCompletionAction(currentAnalyzedPath);
 
             if (action == null) {
                 future.complete(ImmutableList.of());
@@ -141,9 +134,8 @@ public class Completor {
             try {
                 ImmutableList<CompletionCandidate> candidates = action.getCompletionCandidates(args);
                 future.complete(candidates);
-            } catch (ClassCastException e) {
-                System.out.println(e);
-                future.complete(ImmutableList.of());
+            } catch (CancellationException e) {
+                // ignored
             }
         });
 
@@ -158,6 +150,20 @@ public class Completor {
                 .setCompletionCandidates(candidates)
                 .setTextEditOptions(textEditOptions.build())
                 .build();
+    }
+
+    private static CompletionAction getCompletionAction(TreePath currentAnalyzedPath) {
+        CompletionAction action;
+        if (currentAnalyzedPath.getLeaf() instanceof MemberSelectTree || currentAnalyzedPath.getLeaf() instanceof ImportTree importTree) {
+            action = new CompleteMemberSelectAction();
+        } else if (currentAnalyzedPath.getLeaf() instanceof IdentifierTree) {
+            action = new CompleteSymbolAction();
+        } else if (currentAnalyzedPath.getLeaf() instanceof LiteralTree)
+            action = NoCandidateAction.INSTANCE;
+        else {
+            action = null;
+        }
+        return action;
     }
 
     private CompletionResult getCompletionCandidatesFromCache(int line, int column, String prefix) {
@@ -187,4 +193,12 @@ public class Completor {
         return Optional.empty();
     }
 
+    private static class NoCandidateAction implements CompletionAction {
+        public static final NoCandidateAction INSTANCE = new NoCandidateAction();
+
+        @Override
+        public ImmutableList<CompletionCandidate> getCompletionCandidates(CompletionArgs args) {
+            return ImmutableList.of();
+        }
+    }
 }
