@@ -1,31 +1,31 @@
 package com.tyron.code.project.graph;
 
-import com.tyron.code.project.model.JarModule;
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.model.*;
+import com.tyron.code.project.model.module.JarModule;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ModuleFileCollectorVisitor implements NodeVisitor<Module> {
 
-    private final List<UnparsedJavaFile> allFiles = new ArrayList<>();
+    private final List<JavaFileInfo> allFiles = new ArrayList<>();
 
     public ModuleFileCollectorVisitor() {
 
     }
 
-    public List<UnparsedJavaFile> getAllFiles() {
+    public List<JavaFileInfo> getAllFiles() {
         return allFiles;
     }
 
     @Override
     public void visit(Module module) {
-        if (module instanceof ProjectModule projectModule) {
+        if (module instanceof JavaModule projectModule) {
             allFiles.addAll(projectModule.getFiles());
         } else if (module instanceof JarModule jarModule) {
-            allFiles.addAll(jarModule.getClasses());
+            allFiles.addAll(jarModule.getFiles());
         }
     }
 }

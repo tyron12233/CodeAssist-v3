@@ -18,6 +18,7 @@ dependencies {
     implementation("com.fifesoft:rsyntaxtextarea:3.3.4")
     implementation("com.fifesoft:autocomplete:3.3.1")
     implementation(project(":project"))
+    implementation(project(":project-impl"))
     implementation(project(":completions"))
 }
 

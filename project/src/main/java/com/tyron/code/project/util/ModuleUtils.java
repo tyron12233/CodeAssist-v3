@@ -2,11 +2,14 @@ package com.tyron.code.project.util;
 
 import com.tyron.code.project.graph.CompileProjectModuleBFS;
 import com.tyron.code.project.graph.ModuleFileCollectorVisitor;
-import com.tyron.code.project.model.*;
-import com.tyron.code.project.model.Module;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JarModule;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ModuleUtils {
 
@@ -16,27 +19,28 @@ public class ModuleUtils {
 
         CompileProjectModuleBFS compileModuleBFS = new CompileProjectModuleBFS(root);
         compileModuleBFS.traverse(currentNode -> {
-            switch (currentNode.getModuleType()) {
-                case JAR_DEPENDENCY, JDK -> files.add(((JarModule) currentNode).getJarPath());
-                case PROJECT -> files.addAll(((ProjectModule) currentNode).getFiles().stream().map(UnparsedJavaFile::path).toList());
+            if (currentNode instanceof JarModule jarModule) {
+                files.add(jarModule.getPath());
+            } else if (currentNode instanceof JavaModule javaProject) {
+                files.addAll(javaProject.getFiles().stream().map(JavaFileInfo::path).toList());
             }
         });
 
         return files;
     }
 
-    public static List<UnparsedJavaFile> getFiles(List<String> qualifiers, ProjectModule projectModule) {
+    public static List<JavaFileInfo> getFiles(List<String> qualifiers, JavaModule projectModule) {
         return projectModule.getFiles().stream().filter(it -> it.qualifiers().equals(qualifiers)).toList();
     }
 
-    public static List<UnparsedJavaFile> getAllClasses(ProjectModule projectModule) {
+    public static List<JavaFileInfo> getAllClasses(JavaModule projectModule) {
         CompileProjectModuleBFS compileModuleBFS = new CompileProjectModuleBFS(projectModule);
         ModuleFileCollectorVisitor visitor = new ModuleFileCollectorVisitor();
         compileModuleBFS.traverse(visitor);
         return visitor.getAllFiles();
     }
 
-    public static List<Module> getDependenciesRecursive(ProjectModule module) {
+    public static List<Module> getDependenciesRecursive(JavaModule module) {
         List<Module> modules = new ArrayList<>();
         CompileProjectModuleBFS compileProjectModuleBFS = new CompileProjectModuleBFS(module);
         compileProjectModuleBFS.traverse(modules::add);

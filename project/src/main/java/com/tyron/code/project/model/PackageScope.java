@@ -12,7 +12,7 @@ public class PackageScope {
 
     private final Multimap<String, PackageScope> subPackages;
 
-    private final Set<UnparsedJavaFile> files;
+    private final Set<JavaFileInfo> files;
 
     private final String simpleName;
 
@@ -50,11 +50,11 @@ public class PackageScope {
         return this.simpleName;
     }
 
-    public Set<UnparsedJavaFile> getFiles() {
+    public Set<JavaFileInfo> getFiles() {
         return files;
     }
 
-    public void addFile(UnparsedJavaFile file) {
+    public void addFile(JavaFileInfo file) {
         files.add(file);
     }
 
@@ -62,7 +62,7 @@ public class PackageScope {
         return parent;
     }
 
-    public void removeFile(UnparsedJavaFile file) {
+    public void removeFile(JavaFileInfo file) {
         files.remove(file);
     }
 

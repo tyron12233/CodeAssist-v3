@@ -1,10 +1,13 @@
-package com.tyron.code.project;
+package com.tyron.code.project.impl;
 
 import com.google.common.collect.ImmutableMap;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.model.*;
-import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.impl.model.JarModuleImpl;
+import com.tyron.code.project.impl.model.JavaModuleImpl;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 import com.tyron.code.project.util.PathUtils;
 import com.tyron.code.project.util.StringSearch;
 
@@ -22,14 +25,13 @@ public class FileSystemModuleManager implements ModuleManager {
     private static final String JAR_EXTENSION = ".jar";
     private final Path root;
 
-    private final ProjectModule projectModule;
+    private final JavaModuleImpl projectModule;
 
     private final FileManager fileManager;
 
     public FileSystemModuleManager(FileManager fileManager, Path root) {
         this.fileManager = fileManager;
-        this.projectModule = new ProjectModule("");
-        projectModule.setDirectory(root);
+        this.projectModule = new JavaModuleImpl(root);
         this.root = root;
     }
 
@@ -43,23 +45,18 @@ public class FileSystemModuleManager implements ModuleManager {
         walkDirectory(root);
     }
 
-
-    public ProjectModule getProjectModule() {
-        return projectModule;
-    }
-
     @Override
-    public synchronized Optional<UnparsedJavaFile> getFileItem(Path path) {
+    public synchronized Optional<JavaFileInfo> getFileItem(Path path) {
         return getFileItem(path, false);
     }
 
-    private Optional<UnparsedJavaFile> getFileItem(Path path, boolean visitDeps) {
-        Deque<ProjectModule> queue = new LinkedList<>();
-        Set<ProjectModule> visited = new HashSet<>();
+    private Optional<JavaFileInfo> getFileItem(Path path, boolean visitDeps) {
+        Deque<JavaModule> queue = new LinkedList<>();
+        Set<JavaModule> visited = new HashSet<>();
         queue.addLast(projectModule);
         while (!queue.isEmpty()) {
-            ProjectModule module = queue.removeFirst();
-            Optional<UnparsedJavaFile> file = module.getFile(path.toString());
+            JavaModule module = queue.removeFirst();
+            Optional<JavaFileInfo> file = module.getFile(path.toString());
             if (file.isPresent()) {
                 return file;
             }
@@ -69,16 +66,15 @@ public class FileSystemModuleManager implements ModuleManager {
             if (!visitDeps) {
                 continue;
             }
-            List<Module> dependingModules = module.getDependingModules(DependencyType.COMPILE_TIME);
+            Set<Module> dependingModules = module.getCompileOnlyDependencies();
             for (Module dependingModule : dependingModules) {
-                if (dependingModule.getModuleType() != ModuleType.PROJECT) {
+                if (!(dependingModule instanceof JavaModule javaModule)) {
                     continue;
                 }
-                ProjectModule dependingProjectModule = (ProjectModule) dependingModule;
-                if (visited.contains(dependingProjectModule)) {
+                if (visited.contains(javaModule)) {
                     continue;
                 }
-                queue.add(dependingProjectModule);
+                queue.add(javaModule);
             }
         }
 
@@ -87,10 +83,10 @@ public class FileSystemModuleManager implements ModuleManager {
 
     @Override
     public void addOrUpdateFile(Path path) {
-        Optional<UnparsedJavaFile> existing = getFileItem(path, true);
+        Optional<JavaFileInfo> existing = getFileItem(path, true);
         Module module = existing.isPresent() ? existing.get().module() : projectModule;
-        if (module instanceof ProjectModule project) {
-            addOrUpdateFile(project, path);
+        if (module instanceof JavaModule javaModule) {
+            addOrUpdateFile(javaModule, path);
         }
     }
 
@@ -118,11 +114,11 @@ public class FileSystemModuleManager implements ModuleManager {
 
     private void addJarModule(Path path) {
         try {
-            JarModule jarModule = JarModule.createJarDependency(path);
+            JarModuleImpl jarModule = new JarModuleImpl(path);
             Path rootJarPath = PathUtils.getRootPathForJarFile(path);
 
             List<JarReader.ClassInfo> infos = JarReader.readJarFile(path);
-            infos.stream().map(it -> new UnparsedJavaFile(jarModule, rootJarPath, it.className(), it.packageQualifiers())).forEach(jarModule::addClass);
+            infos.stream().map(it -> new JavaFileInfo(jarModule, rootJarPath, it.className(), it.packageQualifiers())).forEach(jarModule::addClass);
 
             projectModule.addImplementationDependency(jarModule);
         } catch (Throwable t) {
@@ -130,7 +126,7 @@ public class FileSystemModuleManager implements ModuleManager {
         }
     }
 
-    private void addOrUpdateFile(ProjectModule module, Path path) {
+    private void addOrUpdateFile(JavaModule module, Path path) {
         String name = path.getFileName().toString();
         if (name.endsWith(".java")) {
             name = name.substring(0, name.length() - ".java".length());
@@ -141,8 +137,8 @@ public class FileSystemModuleManager implements ModuleManager {
             qualifiers = Collections.emptyList();
         }
 
-        UnparsedJavaFile unparsedJavaFile = new UnparsedJavaFile(module, path, name, qualifiers);
-        module.addOrReplaceFile(unparsedJavaFile);
+        JavaFileInfo javaFileInfo = new JavaFileInfo(module, path, name, qualifiers);
+        ((JavaModuleImpl) module).addClass(javaFileInfo);
     }
 
 }

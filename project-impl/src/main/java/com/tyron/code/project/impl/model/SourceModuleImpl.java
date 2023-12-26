@@ -1,27 +1,37 @@
-package com.tyron.code.project.model;
+package com.tyron.code.project.impl.model;
 
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.PackageScope;
+import com.tyron.code.project.model.module.SourceModule;
+
+import java.nio.file.Path;
 import java.util.*;
 
-public class ModuleWithSourceFiles extends Module {
+public class SourceModuleImpl extends AbstractModule implements SourceModule {
 
-    private PackageScope rootPackage;
+    private final PackageScope rootPackage;
+    private final Map<Path, JavaFileInfo> fileMap;
 
-    public ModuleWithSourceFiles(ModuleType moduleType) {
-        this(moduleType, "");
+    public SourceModuleImpl(Path root) {
+        super(root);
+        this.rootPackage = new PackageScope("");
+        this.fileMap = new HashMap<>();
     }
 
-    public ModuleWithSourceFiles(ModuleType moduleType, String debugName) {
-        super(moduleType, debugName);
+    public void addClass(JavaFileInfo info) {
+        JavaFileInfo existingFile = fileMap.get(info.path());
 
-        rootPackage = new PackageScope("");
+        addFileToPackage(info);
+
+        if (existingFile != null) {
+            removeFileFromPackage(existingFile);
+        }
+
+        fileMap.put(info.path(), info);
     }
 
-    public void addClass(UnparsedJavaFile unparsedJavaFile) {
-        getOrCreatePackage(unparsedJavaFile.qualifiers()).addFile(unparsedJavaFile);
-    }
-
+    @Override
     public Optional<PackageScope> getPackage(List<String> qualifiers) {
-        // root package
         if (qualifiers.isEmpty()) {
             return Optional.of(rootPackage);
         }
@@ -40,7 +50,17 @@ public class ModuleWithSourceFiles extends Module {
         return Optional.of(currentPackage);
     }
 
-    public synchronized PackageScope getOrCreatePackage(List<String> packageQualifiers) {
+    @Override
+    public Optional<JavaFileInfo> getFile(Path path) {
+        return Optional.ofNullable(fileMap.get(path));
+    }
+
+    @Override
+    public List<JavaFileInfo> getFiles() {
+        return List.copyOf(fileMap.values());
+    }
+
+    private synchronized PackageScope getOrCreatePackage(List<String> packageQualifiers) {
 
         // root package
         if (packageQualifiers.isEmpty()) {
@@ -63,7 +83,7 @@ public class ModuleWithSourceFiles extends Module {
         return currentPackage;
     }
 
-    public Optional<PackageScope> getPackageScope(String name, PackageScope packageScope) {
+    private Optional<PackageScope> getPackageScope(String name, PackageScope packageScope) {
         List<PackageScope> subPackages = packageScope.getSubPackages(name);
         if (subPackages.isEmpty()) {
             return Optional.empty();
@@ -71,11 +91,11 @@ public class ModuleWithSourceFiles extends Module {
         return Optional.of(subPackages.get(0));
     }
 
-    public void addFileToPackage(UnparsedJavaFile file) {
+    public void addFileToPackage(JavaFileInfo file) {
         getOrCreatePackage(file.qualifiers()).addFile(file);
     }
 
-    public void removeFileFromPackage(UnparsedJavaFile file) {
+    public void removeFileFromPackage(JavaFileInfo file) {
         Deque<PackageScope> stack = new ArrayDeque<>();
         PackageScope currentPackage = rootPackage;
         for (String qualifier : file.qualifiers()) {
@@ -91,5 +111,4 @@ public class ModuleWithSourceFiles extends Module {
             currentPackage.removePackage(scope);
         }
     }
-
 }

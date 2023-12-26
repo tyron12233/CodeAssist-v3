@@ -1,20 +1,26 @@
 package com.tyron.code.desktop;
 
-import com.tyron.code.desktop.completion.candidates.MethodCompletionCandidate;
 import com.tyron.code.java.analysis.Analyzer;
 import com.tyron.code.java.completion.CompletionCandidate;
 import com.tyron.code.java.completion.CompletionResult;
 import com.tyron.code.java.completion.Completor;
 import com.tyron.code.java.completion.ElementCompletionCandidate;
-import com.tyron.code.project.FileSystemModuleManager;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.SimpleFileManager;
-import com.tyron.code.project.model.JarModule;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.model.UnparsedJavaFile;
-import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.impl.FileSystemModuleManager;
+import com.tyron.code.project.impl.JarReader;
+import com.tyron.code.project.impl.model.JavaModuleImpl;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JarModule;
+import com.tyron.code.project.model.module.JdkModule;
 import org.fife.ui.autocomplete.*;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rsyntaxtextarea.Theme;
+import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
@@ -22,8 +28,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -35,8 +39,8 @@ import java.util.List;
 public class TestEditor extends JFrame {
 
     private final Completor completor;
-    private ProjectModule projectModule;
-    private FileSystemModuleManager fileSystemModuleManager;
+    private JavaModuleImpl javaModule;
+    private ModuleManager fileSystemModuleManager;
 
     private Path editingFile;
 
@@ -46,15 +50,37 @@ public class TestEditor extends JFrame {
     public TestEditor() {
         setupTestProject();
 
-        completor = new Completor(simpleFileManager, new Analyzer(simpleFileManager, projectModule, (message) -> {
-            System.out.println(message);
-        }));
+        completor = new Completor(simpleFileManager, new Analyzer(simpleFileManager, javaModule, System.out::println));
+
 
         JPanel contentPane = new JPanel(new BorderLayout());
         textArea = new RSyntaxTextArea(20, 60);
         textArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
         textArea.setCodeFoldingEnabled(true);
+        textArea.setAntiAliasingEnabled(true);
+        textArea.addParser(new AbstractParser() {
+            @Override
+            public ParseResult parse(RSyntaxDocument doc, String style) {
+                Analyzer analyzer = new Analyzer(simpleFileManager, javaModule, System.out::println);
 
+                DefaultParseResult parseResult = new DefaultParseResult(this);
+                try {
+                    analyzer.analyze(editingFile, doc.getText(0, doc.getLength()), javaModule, result -> {
+
+                    });
+                } catch (BadLocationException e) {
+                    throw new RuntimeException(e);
+                }
+                return parseResult;
+            }
+        });
+        try {
+            Theme theme = Theme.load(getClass().getResourceAsStream(
+                    "/org/fife/ui/rsyntaxtextarea/themes/dark.xml"));
+            theme.apply(textArea);
+        } catch (IOException ioe) { // Never happens
+            throw new RuntimeException(ioe);
+        }
         contentPane.add(new RTextScrollPane(textArea));
 
         CompletionProvider provider = createCompletionProvider();
@@ -73,7 +99,7 @@ public class TestEditor extends JFrame {
         pack();
         setLocationRelativeTo(null);
 
-        UnparsedJavaFile unparsedJavaFile = projectModule.getFiles().get(0);
+        JavaFileInfo javaFileInfo = javaModule.getFiles().get(0);
         textArea.setText(simpleFileManager.getFileContent(editingFile).orElseThrow().toString());
 
         textArea.getDocument().addDocumentListener(new DocumentListener() {
@@ -103,7 +129,9 @@ public class TestEditor extends JFrame {
             fileSystemModuleManager = new FileSystemModuleManager(simpleFileManager, tempDirectory);
             fileSystemModuleManager.initialize();
 
-            projectModule = fileSystemModuleManager.getProjectModule();
+            javaModule = (JavaModuleImpl) fileSystemModuleManager.getRootModule();
+
+
 
             Files.writeString(editingFile, "package test;\n\npublic class Main {\n\tpublic static void main(String[] args) {\n\t\t\n\t}\n}");
             Files.writeString(tempDirectory.resolve("Another.java"), "package test;\n public class Another { public void test() { System.out.println(); }}");
@@ -113,13 +141,13 @@ public class TestEditor extends JFrame {
             simpleFileManager.openFileForSnapshot(editingFile.toUri(), "package test;\n\nclass Main {\n\tpublic static void main(String[] args) {\n\t\t\n\t}\n}");
 
             Path androidJar = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/deskptop-test/android.jar");
-            JarModule jdkModule = JarReader.toJarModule(androidJar, true);
+            JdkModule jdkModule = JarReader.toJdkModule(androidJar);
 
             Path commonsJar = Paths.get("/home/tyronscott/Downloads/guava-33.0.0-jre.jar");
-            JarModule commonsJarModule = JarReader.toJarModule(commonsJar, false);
+            JarModule commonsJarModule = JarReader.toJarModule(commonsJar);
 
-            projectModule.addJdkDependency(jdkModule);
-            projectModule.addImplementationDependency(commonsJarModule);
+            javaModule.setJdk(jdkModule);
+            javaModule.addImplementationDependency(commonsJarModule);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -186,7 +214,7 @@ public class TestEditor extends JFrame {
             }
 
 
-            CompletionResult completionResult = completor.getCompletionResult(projectModule, editingFile, line, column);
+            CompletionResult completionResult = completor.getCompletionResult(javaModule, editingFile, line, column);
 
             List<Completion> list = completionResult.getCompletionCandidates().stream()
                     .map(this::getCompletion)

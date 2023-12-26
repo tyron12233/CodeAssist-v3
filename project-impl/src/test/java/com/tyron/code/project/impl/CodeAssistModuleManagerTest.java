@@ -1,11 +1,11 @@
-package com.tyron.code.project;
+package com.tyron.code.project.impl;
 
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.SimpleFileManager;
-import com.tyron.code.project.model.DependencyType;
-import com.tyron.code.project.model.JarModule;
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.model.ProjectModule;
+import com.tyron.code.project.impl.model.RootModule;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,22 +20,16 @@ class CodeAssistModuleManagerTest {
 
     //language=TOML
     private static final String rootConfigString = """
-            [build]
+            name = ""
             
-            [settings]
-            include = [
-              'app'
-            ]
-            projectName = "root"
+            moduleType = "DEFAULT"
+            includedModules = ["app"]
             """;
 
     //language=TOML
     private static final String appConfigString = """
-            [build]
-            
-            
-            [settings]
-            projectName = "app"
+            name = "app"
+            moduleType = "JAVA"
             """;
 
 
@@ -53,6 +47,16 @@ class CodeAssistModuleManagerTest {
         Path appConfig = Files.createFile(app.resolve("project.toml"));
         Files.writeString(appConfig, appConfigString);
 
+        Path appSourceDir = app.resolve("src/main/java");
+        Path mainJava = appSourceDir.resolve("Main.java");
+
+        Files.createDirectories(appSourceDir);
+        Files.createFile(mainJava);
+        Files.writeString(mainJava, """
+                class Main {
+                }
+                """);
+
         fileManager = new SimpleFileManager(root, List.of());
         moduleManager = new CodeAssistModuleManager(fileManager, root);
     }
@@ -61,21 +65,21 @@ class CodeAssistModuleManagerTest {
     public void testConfigParsing() {
         moduleManager.initialize();;
 
-        Module rootModule = moduleManager.getRootModule();
-        assertNotNull(rootModule);
-        assertSame(rootModule.getClass(), ProjectModule.class);
+        Module module = moduleManager.getRootModule();
+        assertNotNull(module);
+        assertEquals(RootModule.class, module.getClass());
 
-        ProjectModule rootProjectModule = (ProjectModule) rootModule;
-        assertEquals(rootProjectModule.getDebugName(), "root");
-        List<Module> dependingModules = rootProjectModule.getDependingModules(DependencyType.COMPILE_TIME);
-        assertEquals(dependingModules.size(), 0);
+        RootModule rootModule = ((RootModule) module);
 
-        List<ProjectModule> includedProjects = moduleManager.getIncludedProjects();
+        List<Module> includedProjects = rootModule.getIncludedModules();
         assertNotEquals(includedProjects.size(), 0);
 
-        Module module = includedProjects.get(0);
-        assertNotNull(module);
-        assertEquals(module.getClass(), ProjectModule.class);
-        assertEquals(module.getDebugName(), "app");
+        Module app = includedProjects.get(0);
+        assertNotNull(app);
+        assertEquals("app", app.getName());
+
+        JavaModule project = ((JavaModule) app);
+        List<JavaFileInfo> files = project.getFiles();
+        assert !files.isEmpty();
     }
 }

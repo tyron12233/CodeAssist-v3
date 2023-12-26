@@ -2,16 +2,14 @@ package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.java.analysis.Analyzer;
-import com.tyron.code.java.parsing.AdjustedLineMap;
 import com.tyron.code.java.parsing.FileContentFixer;
 import com.tyron.code.java.parsing.Insertion;
 import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
-import com.tyron.code.project.model.ProjectModule;
+import com.tyron.code.project.model.module.JavaModule;
 import shadow.com.sun.source.tree.*;
 import shadow.com.sun.source.util.TreePath;
 import shadow.com.sun.tools.javac.tree.JCTree;
-import shadow.com.sun.tools.javac.util.Position;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,7 +40,7 @@ public class Completor {
         this.analyzer = analyzer;
     }
 
-    public CompletionResult getCompletionResult(ProjectModule module, Path file, int line, int column) {
+    public CompletionResult getCompletionResult(JavaModule module, Path file, int line, int column) {
         // PositionContext gets the tree path whose leaf node includes the position
         // (position < node's endPosition). However, for completions, we want the leaf node either
         // includes the position, or just before the position (position == node's endPosition).
@@ -103,7 +101,7 @@ public class Completor {
     private CompletionResult computeCompletionResult(
             Path file,
             String fixedContents,
-            ProjectModule module,
+            JavaModule module,
             int line,
             int column,
             int offset,

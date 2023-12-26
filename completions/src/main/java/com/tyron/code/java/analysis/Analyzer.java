@@ -3,12 +3,15 @@ package com.tyron.code.java.analysis;
 import com.tyron.code.java.ModuleFileManager;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.FileSnapshot;
-import com.tyron.code.project.model.ProjectModule;
+import com.tyron.code.project.model.module.JavaModule;
 import shadow.com.sun.source.tree.CompilationUnitTree;
 import shadow.com.sun.tools.javac.api.JavacTaskImpl;
 import shadow.com.sun.tools.javac.api.JavacTool;
 import shadow.com.sun.tools.javac.util.Context;
 import shadow.javax.lang.model.element.Element;
+import shadow.javax.tools.Diagnostic;
+import shadow.javax.tools.DiagnosticCollector;
+import shadow.javax.tools.JavaFileObject;
 
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -31,16 +34,16 @@ public class Analyzer {
     private final Consumer<String> progressConsumer;
     private final ModuleFileManager moduleFileManager;
 
-    public Analyzer(FileManager fileManager, ProjectModule projectModule, Consumer<String> progressConsumer) {
+    public Analyzer(FileManager fileManager, JavaModule projectModule, Consumer<String> progressConsumer) {
         this.progressConsumer = progressConsumer;
         moduleFileManager = new ModuleFileManager(fileManager, projectModule);
     }
 
-    public synchronized void analyze(Path path, String contents, ProjectModule projectModule, Consumer<AnalysisResult> consumer) {
-        analyzeInternal(projectModule, path, contents, consumer);
+    public synchronized void analyze(Path path, String contents, JavaModule javaProject, Consumer<AnalysisResult> consumer) {
+        analyzeInternal(javaProject, path, contents, consumer);
     }
 
-    private void analyzeInternal(ProjectModule projectModule, Path path, String contents, Consumer<AnalysisResult> consumer) {
+    private void analyzeInternal(JavaModule javaProject, Path path, String contents, Consumer<AnalysisResult> consumer) {
         if (currentTask != null) {
             cancelled.set(true);
             try {
@@ -53,7 +56,7 @@ public class Analyzer {
             }
         }
 
-        currentTask = new FutureTask<>(new AnalyzeCallable(projectModule, path, contents, consumer));
+        currentTask = new FutureTask<>(new AnalyzeCallable(javaProject, path, contents, consumer));
         new Thread(currentTask).start();
     }
 
@@ -64,11 +67,11 @@ public class Analyzer {
         throw new RuntimeException(e.getCause());
     }
 
-    private JavacTaskImpl getJavacTask(Path path, String contents, Context context, ProjectModule projectModule) {
+    private JavacTaskImpl getJavacTask(Path path, String contents, Context context, JavaModule projectModule, DiagnosticCollector<JavaFileObject> collector) {
         return (JavacTaskImpl) SYSTEM_PROVIDER.getTask(
                 new PrintWriter(Writer.nullWriter()),
                 moduleFileManager,
-                diagnostic -> {},
+                collector,
                 List.of(
                         "-XDide",
                         "-XDcompilePolicy=byfile",
@@ -82,7 +85,7 @@ public class Analyzer {
                         "-g:lines",
                         "-g:vars",
                         "-bootclasspath",
-                        projectModule.getJdkModule().getJarPath().toString(),
+                        projectModule.getJdkModule().getPath().toString(),
                         "-XDbreakDocCommentParsingOnError=false",
                         "-Xlint:cast",
                         "-Xlint:deprecation",
@@ -101,13 +104,13 @@ public class Analyzer {
     }
 
     private class AnalyzeCallable implements Callable<AnalysisResult> {
-        private final ProjectModule projectModule;
+        private final JavaModule javaProject;
         private final Path file;
         private final String contents;
         private final Consumer<AnalysisResult> consumer;
 
-        public AnalyzeCallable(ProjectModule projectModule, Path file, String contents, Consumer<AnalysisResult> consumer) {
-            this.projectModule = projectModule;
+        public AnalyzeCallable(JavaModule projectModule, Path file, String contents, Consumer<AnalysisResult> consumer) {
+            this.javaProject = projectModule;
             this.file = file;
             this.contents = contents;
             this.consumer = consumer;
@@ -117,7 +120,8 @@ public class Analyzer {
         public AnalysisResult call() throws Exception {
             progressConsumer.accept("1. Getting task from task pool.");
             Context context = new Context();
-            JavacTaskImpl javacTask = getJavacTask(file, contents, context, projectModule);
+            DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
+            JavacTaskImpl javacTask = getJavacTask(file, contents, context, javaProject, collector);
 
             moduleFileManager.setCompletingFile(file, contents);
             try {
@@ -136,10 +140,15 @@ public class Analyzer {
 
                     Iterable<? extends Element> analyzed = javacTask.analyze();
 
-                    AnalysisResult analysisResult = new AnalysisResult(projectModule, javacTask, parsed.iterator().next(), analyzed, Analyzer.this);
+                    List<Diagnostic<? extends JavaFileObject>> diagnostics = collector.getDiagnostics();
+
+                    AnalysisResult analysisResult = new AnalysisResult(javaProject, javacTask, parsed.iterator().next(), analyzed, Analyzer.this);
                     consumer.accept(analysisResult);
                     return analysisResult;
                 }
+            } catch (RuntimeException e) {
+                e.printStackTrace();
+                return null;
             } finally {
                 moduleFileManager.setCompletingFile(null, null);
             }

@@ -30,5 +30,5 @@ public abstract class GraphBFS<T> {
         }
     }
 
-    protected abstract List<T> getChildren(T node);
+    protected abstract Collection<T> getChildren(T node);
 }

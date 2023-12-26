@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.model.JavaFileInfo;
 import shadow.javax.lang.model.element.Modifier;
 import shadow.javax.lang.model.element.NestingKind;
 import shadow.javax.tools.JavaFileObject;
@@ -18,7 +18,7 @@ public class SourceFileObject implements JavaFileObject {
     final String contents;
     /** if contents is set, the modified time of contents */
     final Instant modified;
-    private UnparsedJavaFile unparsedJavaFile;
+    private JavaFileInfo javaFileInfo;
 
     public SourceFileObject(Path path) {
         this(path, null, Instant.EPOCH);
@@ -151,7 +151,7 @@ public class SourceFileObject implements JavaFileObject {
         return path.toString();
     }
 
-    public UnparsedJavaFile getUnparsedJavaFile() {
-        return unparsedJavaFile;
+    public JavaFileInfo getUnparsedJavaFile() {
+        return javaFileInfo;
     }
 }

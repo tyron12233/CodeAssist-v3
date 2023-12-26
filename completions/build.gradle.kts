@@ -18,6 +18,7 @@ dependencies {
     implementation("me.xdrop:fuzzywuzzy:1.2.0")
 
     implementation("com.google.auto.value:auto-value-annotations:1.8.2")
+    testImplementation(project(mapOf("path" to ":project-impl")))
     annotationProcessor("com.google.auto.value:auto-value:1.8.2")
 
     implementation(project(":project"))

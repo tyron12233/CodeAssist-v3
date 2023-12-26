@@ -1,7 +1,7 @@
 package com.tyron.code.project;
 
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.Module;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -14,7 +14,7 @@ public interface ModuleManager {
      */
     void initialize();
 
-    Optional<UnparsedJavaFile> getFileItem(Path path);
+    Optional<JavaFileInfo> getFileItem(Path path);
 
     void addOrUpdateFile(Path path);
 

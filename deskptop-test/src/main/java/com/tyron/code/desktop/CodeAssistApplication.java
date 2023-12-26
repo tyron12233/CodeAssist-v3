@@ -1,13 +1,12 @@
 package com.tyron.code.desktop;
 
-import com.tyron.code.project.FileSystemModuleManager;
 import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.FileManagerImpl;
+import com.tyron.code.project.impl.FileSystemModuleManager;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public class CodeAssistApplication {

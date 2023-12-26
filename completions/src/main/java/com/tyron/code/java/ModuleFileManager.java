@@ -5,16 +5,14 @@ import com.tyron.code.java.parsing.MethodBodyPruner;
 import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.FileSnapshot;
-import com.tyron.code.project.model.JarModule;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.model.UnparsedJavaFile;
-import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.JdkModule;
+import com.tyron.code.project.util.ClassNameUtils;
 import com.tyron.code.project.util.ModuleUtils;
 import com.tyron.code.project.util.StringSearch;
 import shadow.com.sun.tools.javac.api.JavacTool;
 import shadow.com.sun.tools.javac.file.JavacFileManager;
-import shadow.com.sun.tools.javac.file.Locations;
-import shadow.com.sun.tools.javac.file.PathFileObject;
 import shadow.com.sun.tools.javac.tree.JCTree;
 import shadow.javax.tools.*;
 
@@ -23,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
-import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,25 +43,25 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     }
 
     private final FileManager projectFileManager;
-    private final ProjectModule module;
+    private final JavaModule module;
 
 
-    public ModuleFileManager(FileManager projectFileManager, ProjectModule module) {
+    public ModuleFileManager(FileManager projectFileManager, JavaModule module) {
         super(createDelegateFileManager());
         this.projectFileManager = projectFileManager;
         this.module = module;
 
         try {
-            JarModule jdkModule = module.getJdkModule();
-            fileManager.setLocation(StandardLocation.PLATFORM_CLASS_PATH, List.of(jdkModule.getJarPath().toFile()));
-            fileManager.setLocation(StandardLocation.SOURCE_PATH, List.of(module.getDirectory().toFile()));
+            JdkModule jdkModule = module.getJdkModule();
+            fileManager.setLocation(StandardLocation.PLATFORM_CLASS_PATH, List.of(jdkModule.getPath().toFile()));
+            fileManager.setLocation(StandardLocation.SOURCE_PATH, List.of(module.getSourceDirectory().toFile()));
             fileManager.setLocation(StandardLocation.CLASS_PATH, getClassPath(module));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private Iterable<? extends File> getClassPath(ProjectModule module) {
+    private Iterable<? extends File> getClassPath(JavaModule module) {
         return ModuleUtils.getCompileClassPath(module).stream()
                 .map(Path::toFile)
                 .toList();
@@ -86,7 +83,7 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         // system but in android we don't use modules, this method will redirect modules into the
         // android.jar we provided in the classpath
         if (location.getClass().toString().contains("Module")) {
-            return module.getJdkModule().getPackage(Arrays.stream(packageName.split("\\.")).toList()).stream()
+            return module.getJdkModule().getPackage(ClassNameUtils.getAsQualifierList(packageName)).stream()
                     .flatMap(packageScope -> packageScope.getFiles().stream())
                     .map(c -> new ClassFileObject(c.path(), JavaFileObject.Kind.CLASS))
                     .map(c -> (JavaFileObject) c)
@@ -99,6 +96,10 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     public String inferBinaryName(Location location, JavaFileObject file) {
         if (location == StandardLocation.SOURCE_PATH) {
             return extractClassName((FileSnapshot) file);
+        }
+
+        if (!(file instanceof ClassFileObject)) {
+            return super.inferBinaryName(location, file);
         }
 
         Objects.requireNonNull(file);
@@ -131,8 +132,8 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
                 .orElseGet(() -> Files.getNameWithoutExtension(source.getName()));
     }
 
-    private JavaFileObject asSourceFileObject(UnparsedJavaFile unparsedJavaFile) {
-        Path path = unparsedJavaFile.path();
+    private JavaFileObject asSourceFileObject(JavaFileInfo javaFileInfo) {
+        Path path = javaFileInfo.path();
 
 
         String content = Optional.ofNullable(completingFile.equals(path) ? completingFile : null)
@@ -187,7 +188,7 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         }
 
         public String inferBinaryName(Iterable<? extends Path> paths) {
-            return JarReader.getFqn(pathInside.toString());
+            return ClassNameUtils.getFqn(pathInside.toString());
         }
 
         @Override

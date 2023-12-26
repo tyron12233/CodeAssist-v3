@@ -2,9 +2,12 @@ package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.java.analysis.AnalysisResult;
-import com.tyron.code.project.model.*;
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.PackageScope;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
+import com.tyron.code.project.model.module.SourceModule;
+import com.tyron.code.project.util.ClassNameUtils;
 import com.tyron.code.project.util.ModuleUtils;
 import shadow.com.sun.source.tree.ImportTree;
 import shadow.com.sun.source.tree.MemberSelectTree;
@@ -84,20 +87,20 @@ public class CompleteMemberSelectAction implements CompletionAction {
     }
 
     private ImmutableList<CompletionCandidate> completePackage(AnalysisResult analysisResult, Scope scope, Type.PackageType type, String prefix) {
-        ProjectModule module = analysisResult.module();
+        JavaModule module = analysisResult.module();
         List<Module> dependenciesRecursive = ModuleUtils.getDependenciesRecursive(module);
 
-        List<String> asQualifierList = JarReader.getAsQualifierList(type.toString());
+        List<String> asQualifierList = ClassNameUtils.getAsQualifierList(type.toString());
         List<PackageScope> packageScopes = dependenciesRecursive.stream()
-                .filter(dependency -> dependency instanceof ModuleWithSourceFiles)
-                .map(dependency -> (ModuleWithSourceFiles) dependency)
+                .filter(dependency -> dependency instanceof SourceModule)
+                .map(dependency -> (SourceModule) dependency)
                 .flatMap(dependency -> dependency.getPackage(asQualifierList).stream())
                 .filter(Objects::nonNull)
                 .toList();
 
         ImmutableList.Builder<CompletionCandidate> builder = ImmutableList.builder();
         for (PackageScope packageScope : packageScopes) {
-            Set<UnparsedJavaFile> files = packageScope.getFiles();
+            Set<JavaFileInfo> files = packageScope.getFiles();
             List<PackageScope> subPackages = packageScope.getSubPackages();
 
             files.stream().map(it -> new SimpleCompletionCandidate(it.fileName())).forEach(builder::add);

@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 
 import com.tyron.code.project.model.TextPosition;
 import com.tyron.code.project.model.TextRange;
-import com.tyron.code.project.model.UnparsedJavaFile;
 import shadow.javax.tools.SimpleJavaFileObject;
 
 /** Snapshot of the content of a file. */

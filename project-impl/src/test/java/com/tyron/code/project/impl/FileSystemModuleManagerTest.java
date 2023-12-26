@@ -1,8 +1,8 @@
-package com.tyron.code.project;
+package com.tyron.code.project.impl;
 
 import com.tyron.code.project.file.SimpleFileManager;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.impl.model.JavaModuleImpl;
+import com.tyron.code.project.model.JavaFileInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,12 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FileSystemModuleManagerTest {
 
     private FileSystemModuleManager manager;
-    private ProjectModule module;
+    private JavaModuleImpl module;
 
     private Path root;
 
@@ -25,7 +25,7 @@ class FileSystemModuleManagerTest {
         root = Files.createTempDirectory("project");
         SimpleFileManager fileManager = new SimpleFileManager();
         manager = new FileSystemModuleManager(fileManager, root);
-        module = manager.getProjectModule();
+        module = (JavaModuleImpl) manager.getRootModule();
     }
 
     @Test
@@ -33,14 +33,14 @@ class FileSystemModuleManagerTest {
         Path testJavaFile = root.resolve("Test.java");
         Files.createFile(testJavaFile);
 
-        List<UnparsedJavaFile> files = module.getFiles();
+        List<JavaFileInfo> files = module.getFiles();
         assertEquals(0, files.size());
 
         manager.addOrUpdateFile(testJavaFile);
         files = module.getFiles();
         assertEquals(1, files.size());
 
-        UnparsedJavaFile file = files.get(0);
+        JavaFileInfo file = files.get(0);
         assertEquals(testJavaFile, file.path());
     }
 

@@ -6,5 +6,5 @@ public class Settings {
 
     public String projectName;
 
-    public List<String> include;
+    public List<String> include = List.of();
 }

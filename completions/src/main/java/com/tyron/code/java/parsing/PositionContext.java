@@ -2,8 +2,9 @@ package com.tyron.code.java.parsing;
 
 import com.google.auto.value.AutoValue;
 import com.tyron.code.project.file.FileManager;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.model.UnparsedJavaFile;
+import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 import shadow.com.sun.source.tree.ErroneousTree;
 import shadow.com.sun.source.tree.LineMap;
 import shadow.com.sun.source.tree.Tree;
@@ -18,7 +19,7 @@ import java.util.Optional;
 @AutoValue
 public abstract class PositionContext {
 
-    public abstract ProjectModule getModule();
+    public abstract Module getModule();
 
     public abstract Path getPath();
 
@@ -47,8 +48,8 @@ public abstract class PositionContext {
      * @param column      0-based character offset from the beginning of the line to the completion point
      */
     public static Optional<PositionContext> createForPosition(
-            FileManager fileManager, ProjectModule module, Path filePath, int line, int column) {
-        Optional<UnparsedJavaFile> inputFileScope = module.getFile(filePath.toString());
+            FileManager fileManager, JavaModule module, Path filePath, int line, int column) {
+        Optional<JavaFileInfo> inputFileScope = module.getFile(filePath.toString());
         if (inputFileScope.isEmpty()) {
             return Optional.empty();
         }

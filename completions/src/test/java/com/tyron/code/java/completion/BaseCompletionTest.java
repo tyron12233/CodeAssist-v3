@@ -1,16 +1,14 @@
 package com.tyron.code.java.completion;
 
 import com.tyron.code.java.analysis.Analyzer;
-import com.tyron.code.project.FileSystemModuleManager;
 import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.SimpleFileManager;
-import com.tyron.code.project.model.JarModule;
-import com.tyron.code.project.model.Module;
-import com.tyron.code.project.model.ProjectModule;
-import com.tyron.code.project.util.JarReader;
+import com.tyron.code.project.impl.FileSystemModuleManager;
+import com.tyron.code.project.impl.JarReader;
+import com.tyron.code.project.impl.model.JavaModuleImpl;
+import com.tyron.code.project.model.module.JdkModule;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.io.IOException;
@@ -25,7 +23,7 @@ public abstract class BaseCompletionTest {
 
     protected FileManager fileManager;
     protected ModuleManager moduleManager;
-    protected ProjectModule rootModule;
+    protected JavaModuleImpl rootModule;
 
     protected Completor completor;
 
@@ -38,10 +36,10 @@ public abstract class BaseCompletionTest {
         moduleManager = new FileSystemModuleManager(fileManager, root);
         moduleManager.initialize();
 
-        rootModule = (ProjectModule) moduleManager.getRootModule();
+        rootModule = (JavaModuleImpl) moduleManager.getRootModule();
 
-        JarModule jdkModule = JarReader.toJarModule(Paths.get("src/test/resources/android.jar"), true);
-        rootModule.addJdkDependency(jdkModule);
+        JdkModule jdkModule = JarReader.toJdkModule(Paths.get("src/test/resources/android.jar"));
+        rootModule.setJdk(jdkModule);
 
         analyzer = new Analyzer(fileManager, rootModule, (s -> {}));
         completor = new Completor(fileManager, analyzer);
