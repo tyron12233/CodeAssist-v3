@@ -146,9 +146,6 @@ public class Analyzer {
                     consumer.accept(analysisResult);
                     return analysisResult;
                 }
-            } catch (RuntimeException e) {
-                e.printStackTrace();
-                return null;
             } finally {
                 moduleFileManager.setCompletingFile(null, null);
             }

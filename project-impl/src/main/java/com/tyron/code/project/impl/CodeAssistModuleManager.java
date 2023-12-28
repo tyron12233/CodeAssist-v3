@@ -65,10 +65,6 @@ public class CodeAssistModuleManager implements ModuleManager {
 
     }
 
-    public List<Module> getIncludedProjects() {
-        return ImmutableList.copyOf(includedProjects.values());
-    }
-
     @Override
     public Module getRootModule() {
         return rootProject;

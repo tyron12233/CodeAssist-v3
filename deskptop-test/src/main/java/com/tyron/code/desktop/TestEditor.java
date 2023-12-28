@@ -35,6 +35,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 
 public class TestEditor extends JFrame {
 
@@ -50,7 +52,8 @@ public class TestEditor extends JFrame {
     public TestEditor() {
         setupTestProject();
 
-        completor = new Completor(simpleFileManager, new Analyzer(simpleFileManager, javaModule, System.out::println));
+        Analyzer analyzer = new Analyzer(simpleFileManager, javaModule, System.out::println);
+        completor = new Completor(simpleFileManager, analyzer);
 
 
         JPanel contentPane = new JPanel(new BorderLayout());
@@ -61,15 +64,20 @@ public class TestEditor extends JFrame {
         textArea.addParser(new AbstractParser() {
             @Override
             public ParseResult parse(RSyntaxDocument doc, String style) {
-                Analyzer analyzer = new Analyzer(simpleFileManager, javaModule, System.out::println);
 
                 DefaultParseResult parseResult = new DefaultParseResult(this);
                 try {
                     analyzer.analyze(editingFile, doc.getText(0, doc.getLength()), javaModule, result -> {
-
+                        System.out.println("Running background analysis");
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            // ignored
+                        }
+                        System.out.println("Done background analysis");
                     });
-                } catch (BadLocationException e) {
-                    throw new RuntimeException(e);
+                } catch (BadLocationException | CancellationException e) {
+                    // ignored
                 }
                 return parseResult;
             }

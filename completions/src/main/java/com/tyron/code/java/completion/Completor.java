@@ -111,31 +111,34 @@ public class Completor {
 
         CompletableFuture<ImmutableList<CompletionCandidate>> future = new CompletableFuture<>();
 
+        try {
+            analyzer.analyze(file, fixedContents, module, analysisResult -> {
+                JCTree.JCCompilationUnit jcCompilationUnit = (JCTree.JCCompilationUnit) analysisResult.parsedTree();
+                analyzer.checkCancelled();
 
-        analyzer.analyze(file, fixedContents, module, analysisResult -> {
-            JCTree.JCCompilationUnit jcCompilationUnit = (JCTree.JCCompilationUnit) analysisResult.parsedTree();
-            analyzer.checkCancelled();
+                FindCompletionsAt findCompletionsAt = new FindCompletionsAt(analysisResult.javacTask());
+                TreePath currentAnalyzedPath = findCompletionsAt.scan(jcCompilationUnit, (long) offset);
+                CompletionArgs args = new CompletionArgs(null, module, currentAnalyzedPath, analysisResult, prefix);
+                analyzer.checkCancelled();
 
-            FindCompletionsAt findCompletionsAt = new FindCompletionsAt(analysisResult.javacTask());
-            TreePath currentAnalyzedPath = findCompletionsAt.scan(jcCompilationUnit, (long) offset);
-            CompletionArgs args = new CompletionArgs(null, module, currentAnalyzedPath, analysisResult, prefix);
-            analyzer.checkCancelled();
+                CompletionAction action = getCompletionAction(currentAnalyzedPath);
 
-            CompletionAction action = getCompletionAction(currentAnalyzedPath);
-
-            if (action == null) {
-                future.complete(ImmutableList.of());
-                return;
-            }
+                if (action == null) {
+                    future.complete(ImmutableList.of());
+                    return;
+                }
 
 
-            try {
-                ImmutableList<CompletionCandidate> candidates = action.getCompletionCandidates(args);
-                future.complete(candidates);
-            } catch (CancellationException e) {
-                // ignored
-            }
-        });
+                try {
+                    ImmutableList<CompletionCandidate> candidates = action.getCompletionCandidates(args);
+                    future.complete(candidates);
+                } catch (CancellationException e) {
+                    future.complete(ImmutableList.of());
+                }
+            });
+        } catch (CancellationException e) {
+            future.complete(ImmutableList.of());
+        }
 
 
         ImmutableList<CompletionCandidate> candidates =
