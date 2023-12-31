@@ -1,6 +1,7 @@
 package com.tyron.code.project;
 
 import com.tyron.code.project.model.module.Module;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 
@@ -13,5 +14,5 @@ public interface WorkspaceCloseListener {
      *
      * @param workspace New workspace module assigned.
      */
-    void onWorkspaceClosed(@Nonnull Workspace workspace);
+    void onWorkspaceClosed(@NotNull Workspace workspace);
 }

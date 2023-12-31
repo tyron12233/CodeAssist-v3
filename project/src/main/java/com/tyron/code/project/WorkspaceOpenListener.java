@@ -1,5 +1,7 @@
 package com.tyron.code.project;
 
+import org.jetbrains.annotations.NotNull;
+
 import javax.annotation.Nonnull;
 
 /**
@@ -11,5 +13,5 @@ public interface WorkspaceOpenListener {
      *
      * @param workspace New workspace assigned.
      */
-    void onWorkspaceOpened(@Nonnull Workspace workspace);
+    void onWorkspaceOpened(@NotNull Workspace workspace);
 }

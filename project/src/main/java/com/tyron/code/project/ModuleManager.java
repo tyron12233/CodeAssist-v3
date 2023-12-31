@@ -2,6 +2,7 @@ package com.tyron.code.project;
 
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.module.Module;
+import com.tyron.code.project.model.module.RootModule;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -24,5 +25,5 @@ public interface ModuleManager {
     /** Add a module that all modules loaded by the module manager depends on. */
     void addDependingModule(Module module);
 
-    Module getRootModule();
+    RootModule getRootModule();
 }

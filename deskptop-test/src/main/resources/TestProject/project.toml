@@ -1,7 +1,0 @@
-type = "java-library"
-
-[build]
-
-[settings]
-projectName = "TestProject"
-

@@ -1,74 +1,109 @@
 package com.tyron.code.project.impl;
 
 import com.google.common.collect.ImmutableMap;
+import com.tyron.code.info.JvmClassInfo;
+import com.tyron.code.info.SourceClassInfo;
+import com.tyron.code.info.builder.JvmClassInfoBuilder;
+import com.tyron.code.info.builder.SourceClassInfoBuilder;
+import com.tyron.code.logging.Logging;
+import com.tyron.code.project.InitializationException;
 import com.tyron.code.project.impl.model.JarModuleImpl;
 import com.tyron.code.project.impl.model.JavaModuleImpl;
+import com.tyron.code.project.impl.model.JdkModuleImpl;
 import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.model.module.JdkModule;
 import com.tyron.code.project.model.module.Module;
 import com.tyron.code.project.util.PathUtils;
 import com.tyron.code.project.util.StringSearch;
+import com.tyron.code.project.util.Unchecked;
+import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ModuleInitializer {
 
-    public void initializeModules(List<Module> modules) {
-        List<IOException> exceptions = new ArrayList<>();
-        for (Module module : modules) {
-            try {
-                if (module instanceof JavaModuleImpl project) {
-                    initializeJavaProject(project);
-                    continue;
-                }
+    private static final Logger logger = Logging.get(ModuleInitializer.class);
 
-                if (module instanceof JarModuleImpl jarModule) {
-                    initializeJarModule(jarModule);
-                    continue;
-                }
-            } catch (IOException e) {
-                exceptions.add(e);
+    public void initializeModules(List<Module> modules) {
+        modules.forEach(this::initializeModule);
+    }
+
+    public void initializeModule(Module module) {
+        try {
+            if (module instanceof JavaModuleImpl project) {
+                initializeJavaProject(project);
+                return;
             }
+
+            if (module instanceof JarModuleImpl jarModule) {
+                initializeJarModule(jarModule);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     private void initializeJavaProject(JavaModuleImpl project) {
         if (!Files.exists(project.getSourceDirectory())) {
+            logger.warn("Source directory does not exist for project: {}", project.getName());
             return;
         }
+
+        logger.debug("Initializing java project: {}", project.getName());
         ImmutableMap<String, Consumer<Path>> handlers =
                 ImmutableMap.of(
                         ".java",
                         path -> addOrUpdateFile(project, path)
                 );
         PathUtils.walkDirectory(project.getSourceDirectory(), handlers, it -> false);
+        logger.debug("Finished initializing java project: {}", project.getName());
+
+        JdkModule jdkModule = project.getJdkModule();
+        if (jdkModule != null) {
+            Instant start = Instant.now();
+            logger.debug("Initializing jdk module: {}", jdkModule.getName());
+
+            List<JvmClassInfo> jvmClasses = getJvmClasses(jdkModule.getPath());
+            jvmClasses.forEach(it -> ((JdkModuleImpl) jdkModule).addClass(it));
+
+            Duration duration = Duration.between(start, Instant.now());
+            logger.debug("Initialized {} classes, took {} ms", jdkModule.getClasses().size(), duration.toMillis());
+        }
     }
 
     private void addOrUpdateFile(JavaModuleImpl module, Path path) {
-        String name = path.getFileName().toString();
-        if (name.endsWith(".java")) {
-            name = name.substring(0, name.length() - ".java".length());
-        }
-        List<String> qualifiers = Arrays.stream(StringSearch.packageName(path).split("\\.")).toList();
 
-        if (qualifiers.size() == 1 && qualifiers.get(0).isEmpty()) {
-            qualifiers = Collections.emptyList();
-        }
-
-        JavaFileInfo javaFileInfo = new JavaFileInfo(module, path, name, qualifiers);
-        module.addClass(javaFileInfo);
+        SourceClassInfoBuilder sourceClassInfoBuilder = new SourceClassInfoBuilder(path);
+        SourceClassInfo build = sourceClassInfoBuilder.build();
+        module.addClass(build);
     }
 
     private void initializeJarModule(JarModuleImpl jarModule) throws IOException {
-        List<JarReader.ClassInfo> infos = JarReader.readJarFile(jarModule.getPath());
-        infos.stream()
-                .map(it -> new JavaFileInfo(jarModule, it.classPath(), it.className(), it.packageQualifiers()))
-                .forEach(jarModule::addClass);
+        logger.debug("Initializing jar module: {}", jarModule.getName());
+        List<JvmClassInfo> jvmClasses = getJvmClasses(jarModule.getPath());
+        jvmClasses.forEach(jarModule::addClass);
+        logger.debug("Finished initializing jar module: {}", jarModule.getName());
+    }
+
+    public static List<JvmClassInfo> getJvmClasses(Path jar) {
+        Path jarRoot = PathUtils.getRootPathForJarFile(jar);
+        try (var list = Files.walk(jarRoot)) {
+            return list
+                    .filter(it -> !Files.isDirectory(it))
+                    .filter(it -> it.getFileName().toString().endsWith(".class"))
+                    .map(it -> Unchecked.get(() -> Files.readAllBytes(it)))
+                    .map(JvmClassInfoBuilder::new)
+                    .map(JvmClassInfoBuilder::build)
+                    .toList();
+        } catch (IOException e) {
+            throw new InitializationException(e.getMessage());
+        }
     }
 }

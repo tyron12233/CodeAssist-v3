@@ -1,5 +1,6 @@
 package com.tyron.code.project.graph;
 
+import com.tyron.code.info.ClassInfo;
 import com.tyron.code.project.model.*;
 import com.tyron.code.project.model.module.JarModule;
 import com.tyron.code.project.model.module.JavaModule;
@@ -10,13 +11,13 @@ import java.util.List;
 
 public class ModuleFileCollectorVisitor implements NodeVisitor<Module> {
 
-    private final List<JavaFileInfo> allFiles = new ArrayList<>();
+    private final List<ClassInfo> allFiles = new ArrayList<>();
 
     public ModuleFileCollectorVisitor() {
 
     }
 
-    public List<JavaFileInfo> getAllFiles() {
+    public List<ClassInfo> getAllFiles() {
         return allFiles;
     }
 

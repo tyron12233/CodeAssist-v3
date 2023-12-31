@@ -1,6 +1,8 @@
 package com.tyron.code.java;
 
 import com.google.common.io.Files;
+import com.tyron.code.info.ClassInfo;
+import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.parsing.MethodBodyPruner;
 import com.tyron.code.java.parsing.ParserContext;
 import com.tyron.code.project.file.FileManager;
@@ -23,7 +25,6 @@ import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -71,10 +72,7 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     @Override
     public Iterable<JavaFileObject> list(Location location, String packageName, Set<JavaFileObject.Kind> kinds, boolean recurse) throws IOException {
         if (location == StandardLocation.SOURCE_PATH) {
-            List<String> qualifiers = packageName.isEmpty()
-                    ? List.of()
-                    : Arrays.stream(packageName.split("\\.")).toList();
-            return ModuleUtils.getFiles(qualifiers, module).stream()
+            return ModuleUtils.getFiles(packageName, module).stream()
                     .map(this::asSourceFileObject)
                     ::iterator;
         }
@@ -83,9 +81,9 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         // system but in android we don't use modules, this method will redirect modules into the
         // android.jar we provided in the classpath
         if (location.getClass().toString().contains("Module")) {
-            return module.getJdkModule().getPackage(ClassNameUtils.getAsQualifierList(packageName)).stream()
-                    .flatMap(packageScope -> packageScope.getFiles().stream())
-                    .map(c -> new ClassFileObject(c.path(), JavaFileObject.Kind.CLASS))
+            return module.getJdkModule().getClasses().stream()
+                    .filter(it -> packageName.equals(it.getPackageName()))
+                    .map(c -> new ClassFileObject(module.getJdkModule().getPath(), c))
                     .map(c -> (JavaFileObject) c)
                     .toList();
         }
@@ -132,8 +130,11 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
                 .orElseGet(() -> Files.getNameWithoutExtension(source.getName()));
     }
 
-    private JavaFileObject asSourceFileObject(JavaFileInfo javaFileInfo) {
-        Path path = javaFileInfo.path();
+    private JavaFileObject asSourceFileObject(ClassInfo javaFileInfo) {
+        if (!(javaFileInfo instanceof SourceClassInfo sourceClassInfo)) {
+            throw new IllegalArgumentException("Expected source class info");
+        }
+        Path path = sourceClassInfo.getPath();
 
 
         String content = Optional.ofNullable(completingFile.equals(path) ? completingFile : null)
@@ -168,18 +169,13 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
     }
 
     private static class ClassFileObject extends SimpleJavaFileObject {
-
-        private final Path jarPath;
         private final Path pathInside;
-        protected ClassFileObject(Path pathInside, Kind kind) {
-            super(getRootFromJar(pathInside).toUri(), kind);
+        private final ClassInfo c;
 
-            this.jarPath = getRootFromJar(pathInside);
-            this.pathInside = pathInside;
-        }
-
-        private static Path getRootFromJar(Path path) {
-            return Paths.get(path.getFileSystem().toString());
+        protected ClassFileObject(Path jarPath, ClassInfo c) {
+            super(jarPath.toUri(), Kind.CLASS);
+            this.pathInside = jarPath;
+            this.c = c;
         }
 
         @Override
@@ -188,7 +184,7 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         }
 
         public String inferBinaryName(Iterable<? extends Path> paths) {
-            return ClassNameUtils.getFqn(pathInside.toString());
+            return c.getName();
         }
 
         @Override

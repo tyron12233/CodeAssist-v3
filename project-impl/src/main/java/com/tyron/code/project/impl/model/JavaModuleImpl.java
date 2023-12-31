@@ -1,5 +1,7 @@
 package com.tyron.code.project.impl.model;
 
+import com.tyron.code.info.ClassInfo;
+import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.JdkModule;
 import com.tyron.code.project.model.module.Module;
@@ -11,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public class JavaModuleImpl extends SourceModuleImpl implements JavaModule {
+public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements JavaModule {
 
     private final Set<Module> compileOnlyDependencies;
     private final Set<Module> runtimeOnlyDependencies;
@@ -23,6 +25,16 @@ public class JavaModuleImpl extends SourceModuleImpl implements JavaModule {
         this.rootDirectory = rootDirectory;
         this.compileOnlyDependencies = new HashSet<>();
         this.runtimeOnlyDependencies = new HashSet<>();
+    }
+
+    @Override
+    public void addClass(SourceClassInfo info) {
+        super.addClass(info);
+    }
+
+    @Override
+    public List<SourceClassInfo> getFiles() {
+        return super.getFiles();
     }
 
     @Override

@@ -87,26 +87,7 @@ public class CompleteMemberSelectAction implements CompletionAction {
     }
 
     private ImmutableList<CompletionCandidate> completePackage(AnalysisResult analysisResult, Scope scope, Type.PackageType type, String prefix) {
-        JavaModule module = analysisResult.module();
-        List<Module> dependenciesRecursive = ModuleUtils.getDependenciesRecursive(module);
-
-        List<String> asQualifierList = ClassNameUtils.getAsQualifierList(type.toString());
-        List<PackageScope> packageScopes = dependenciesRecursive.stream()
-                .filter(dependency -> dependency instanceof SourceModule)
-                .map(dependency -> (SourceModule) dependency)
-                .flatMap(dependency -> dependency.getPackage(asQualifierList).stream())
-                .filter(Objects::nonNull)
-                .toList();
-
-        ImmutableList.Builder<CompletionCandidate> builder = ImmutableList.builder();
-        for (PackageScope packageScope : packageScopes) {
-            Set<JavaFileInfo> files = packageScope.getFiles();
-            List<PackageScope> subPackages = packageScope.getSubPackages();
-
-            files.stream().map(it -> new SimpleCompletionCandidate(it.fileName())).forEach(builder::add);
-            subPackages.stream().map(it -> new SimpleCompletionCandidate(it.getSimpleName())).forEach(builder::add);
-        }
-        return builder.build();
+        return ImmutableList.of();
     }
 
     private ImmutableList<CompletionCandidate> completeArrayMemberSelect(boolean isStatic) {

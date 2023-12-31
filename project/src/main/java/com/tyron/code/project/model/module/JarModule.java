@@ -1,7 +1,12 @@
 package com.tyron.code.project.model.module;
 
-import java.nio.file.Path;
+import com.tyron.code.info.JvmClassInfo;
 
-public interface JarModule extends SourceModule {
+import java.nio.file.Path;
+import java.util.List;
+
+public interface JarModule extends SourceModule<JvmClassInfo> {
     Path getPath();
+
+    List<JvmClassInfo> getClasses();
 }

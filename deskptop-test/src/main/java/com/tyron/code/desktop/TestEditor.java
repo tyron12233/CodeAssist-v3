@@ -1,5 +1,6 @@
 package com.tyron.code.desktop;
 
+import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.analysis.Analyzer;
 import com.tyron.code.java.completion.CompletionCandidate;
 import com.tyron.code.java.completion.CompletionResult;
@@ -8,9 +9,10 @@ import com.tyron.code.java.completion.ElementCompletionCandidate;
 import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.SimpleFileManager;
 import com.tyron.code.project.impl.FileSystemModuleManager;
-import com.tyron.code.project.impl.JarReader;
+import com.tyron.code.project.impl.ModuleInitializer;
+import com.tyron.code.project.impl.model.JarModuleImpl;
 import com.tyron.code.project.impl.model.JavaModuleImpl;
-import com.tyron.code.project.model.JavaFileInfo;
+import com.tyron.code.project.impl.model.JdkModuleImpl;
 import com.tyron.code.project.model.module.JarModule;
 import com.tyron.code.project.model.module.JdkModule;
 import org.fife.ui.autocomplete.*;
@@ -36,7 +38,6 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletionException;
 
 public class TestEditor extends JFrame {
 
@@ -107,7 +108,7 @@ public class TestEditor extends JFrame {
         pack();
         setLocationRelativeTo(null);
 
-        JavaFileInfo javaFileInfo = javaModule.getFiles().get(0);
+        SourceClassInfo javaFileInfo = javaModule.getFiles().get(0);
         textArea.setText(simpleFileManager.getFileContent(editingFile).orElseThrow().toString());
 
         textArea.getDocument().addDocumentListener(new DocumentListener() {
@@ -149,10 +150,13 @@ public class TestEditor extends JFrame {
             simpleFileManager.openFileForSnapshot(editingFile.toUri(), "package test;\n\nclass Main {\n\tpublic static void main(String[] args) {\n\t\t\n\t}\n}");
 
             Path androidJar = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/deskptop-test/android.jar");
-            JdkModule jdkModule = JarReader.toJdkModule(androidJar);
+            JdkModule jdkModule = new JdkModuleImpl(androidJar, "11");
+            new ModuleInitializer().initializeModule(jdkModule);
 
             Path commonsJar = Paths.get("/home/tyronscott/Downloads/guava-33.0.0-jre.jar");
-            JarModule commonsJarModule = JarReader.toJarModule(commonsJar);
+
+            JarModule commonsJarModule = new JarModuleImpl(commonsJar);
+            new ModuleInitializer().initializeModule(commonsJarModule);
 
             javaModule.setJdk(jdkModule);
             javaModule.addImplementationDependency(commonsJarModule);

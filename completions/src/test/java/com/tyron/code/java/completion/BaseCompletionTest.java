@@ -5,9 +5,8 @@ import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.SimpleFileManager;
 import com.tyron.code.project.impl.FileSystemModuleManager;
-import com.tyron.code.project.impl.JarReader;
 import com.tyron.code.project.impl.model.JavaModuleImpl;
-import com.tyron.code.project.model.module.JdkModule;
+import com.tyron.code.project.impl.model.JdkModuleImpl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 
@@ -38,7 +37,8 @@ public abstract class BaseCompletionTest {
 
         rootModule = (JavaModuleImpl) moduleManager.getRootModule();
 
-        JdkModule jdkModule = JarReader.toJdkModule(Paths.get("src/test/resources/android.jar"));
+        JdkModuleImpl jdkModule = new JdkModuleImpl(Paths.get("src/test/resources/android.jar"), "11");
+
         rootModule.setJdk(jdkModule);
 
         analyzer = new Analyzer(fileManager, rootModule, (s -> {}));

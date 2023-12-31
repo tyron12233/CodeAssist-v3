@@ -22,8 +22,8 @@ public class CompleteSymbolAction implements CompletionAction {
 
         List<ClassForImportCandidate> list = ModuleUtils.getAllClasses(module).stream()
                 .parallel()
-                .filter(it -> FuzzySearch.partialRatio(args.prefix(), it.fileName()) >= 85)
-                .map(it -> new ClassForImportCandidate(String.join(".", it.qualifiers()), it.fileName(), it.path().toString()))
+                .filter(it -> FuzzySearch.partialRatio(args.prefix(), it.getName()) >= 85)
+                .map(it -> new ClassForImportCandidate(String.join(".", it.getPackageNameParts()), it.getOuterClassName(), it.getSourceFileName()))
                 .toList();
         builder.addAll(list);
 

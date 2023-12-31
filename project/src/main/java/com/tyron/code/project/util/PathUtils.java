@@ -100,7 +100,7 @@ public class PathUtils {
         while (!queue.isEmpty()) {
             Path baseDir = queue.remove();
             try (Stream<Path> entryStream = Files.list(baseDir)) {
-                entryStream.forEach(
+                entryStream.parallel().forEach(
                         entryPath -> {
                             if (ignorePredicate.test(entryPath)) {
                                 logger.info("Ignoring path " + entryPath);

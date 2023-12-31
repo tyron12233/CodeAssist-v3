@@ -1,6 +1,7 @@
 package com.tyron.code.project;
 
 import com.tyron.code.project.model.module.Module;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 
@@ -13,5 +14,5 @@ public interface WorkspaceCloseCondition {
      * @param current Current workspace.
      * @return {@code true} when the operation is allowed.
      */
-    boolean canClose(@Nonnull Workspace current);
+    boolean canClose(@NotNull Workspace current);
 }

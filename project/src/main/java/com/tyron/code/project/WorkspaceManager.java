@@ -1,6 +1,7 @@
 package com.tyron.code.project;
 
 import com.tyron.code.project.model.module.Module;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,15 +48,16 @@ public interface WorkspaceManager {
      * @return {@code true} on success.
      */
     default boolean closeCurrent() {
-        if (getCurrent() != null)
+        if (getCurrent() != null) {
             return setCurrent(null);
+        }
         return true;
     }
 
     /**
      * @return Conditions in the manager that can prevent {@link #setCurrent(Workspace)} from going through.
      */
-    @Nonnull
+    @NotNull
     List<WorkspaceCloseCondition> getWorkspaceCloseConditions();
 
     /**
@@ -73,7 +75,7 @@ public interface WorkspaceManager {
     /**
      * @return Listeners for when a new workspace is assigned as the current one.
      */
-    @Nonnull
+    @NotNull
     List<WorkspaceOpenListener> getWorkspaceOpenListeners();
 
     /**
@@ -91,7 +93,7 @@ public interface WorkspaceManager {
     /**
      * @return Listeners for when the current workspace is removed as being current.
      */
-    @Nonnull
+    @NotNull
     List<WorkspaceCloseListener> getWorkspaceCloseListeners();
 
     /**

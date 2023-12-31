@@ -2,7 +2,7 @@ package com.tyron.code.project.impl;
 
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.SimpleFileManager;
-import com.tyron.code.project.impl.model.RootModule;
+import com.tyron.code.project.impl.model.RootModuleImpl;
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.Module;
@@ -67,9 +67,9 @@ class CodeAssistModuleManagerTest {
 
         Module module = moduleManager.getRootModule();
         assertNotNull(module);
-        assertEquals(RootModule.class, module.getClass());
+        assertEquals(RootModuleImpl.class, module.getClass());
 
-        RootModule rootModule = ((RootModule) module);
+        RootModuleImpl rootModule = ((RootModuleImpl) module);
 
         List<Module> includedProjects = rootModule.getIncludedModules();
         assertNotEquals(includedProjects.size(), 0);

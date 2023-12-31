@@ -151,7 +151,7 @@ public class SourceFileObject implements JavaFileObject {
         return path.toString();
     }
 
-    public JavaFileInfo getUnparsedJavaFile() {
+    public JavaFileInfo getClassInfo() {
         return javaFileInfo;
     }
 }

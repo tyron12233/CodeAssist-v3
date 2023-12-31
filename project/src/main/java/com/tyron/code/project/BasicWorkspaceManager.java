@@ -1,5 +1,7 @@
 package com.tyron.code.project;
 
+import org.jetbrains.annotations.NotNull;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -53,6 +55,7 @@ public class BasicWorkspaceManager implements WorkspaceManager {
     }
 
     @Nonnull
+    @NotNull
     @Override
     public List<WorkspaceCloseCondition> getWorkspaceCloseConditions() {
         return closeConditions;
@@ -69,6 +72,7 @@ public class BasicWorkspaceManager implements WorkspaceManager {
     }
 
     @Nonnull
+    @NotNull
     @Override
     public List<WorkspaceOpenListener> getWorkspaceOpenListeners() {
         return openListeners;
@@ -85,6 +89,7 @@ public class BasicWorkspaceManager implements WorkspaceManager {
     }
 
     @Nonnull
+    @NotNull
     @Override
     public List<WorkspaceCloseListener> getWorkspaceCloseListeners() {
         return closeListeners;
