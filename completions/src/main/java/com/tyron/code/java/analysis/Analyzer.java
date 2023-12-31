@@ -31,19 +31,21 @@ public class Analyzer {
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
     private volatile FutureTask<AnalysisResult> currentTask;
 
+    private final JavaModule projectModule;
     private final Consumer<String> progressConsumer;
     private final ModuleFileManager moduleFileManager;
 
     public Analyzer(FileManager fileManager, JavaModule projectModule, Consumer<String> progressConsumer) {
+        this.projectModule = projectModule;
         this.progressConsumer = progressConsumer;
         moduleFileManager = new ModuleFileManager(fileManager, projectModule);
     }
 
-    public synchronized void analyze(Path path, String contents, JavaModule javaProject, Consumer<AnalysisResult> consumer) {
-        analyzeInternal(javaProject, path, contents, consumer);
+    public synchronized void analyze(Path path, String contents, Consumer<AnalysisResult> consumer) {
+        analyzeInternal(path, contents, consumer);
     }
 
-    private void analyzeInternal(JavaModule javaProject, Path path, String contents, Consumer<AnalysisResult> consumer) {
+    private void analyzeInternal(Path path, String contents, Consumer<AnalysisResult> consumer) {
         if (currentTask != null) {
             cancelled.set(true);
             try {
@@ -56,7 +58,7 @@ public class Analyzer {
             }
         }
 
-        currentTask = new FutureTask<>(new AnalyzeCallable(javaProject, path, contents, consumer));
+        currentTask = new FutureTask<>(new AnalyzeCallable(projectModule, path, contents, consumer));
         new Thread(currentTask).start();
     }
 

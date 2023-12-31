@@ -20,7 +20,7 @@ public class CancellationTest extends BaseCompletionTest {
         final CancellationException[] cancellationException = {null};
         Thread thread = new Thread(() -> {
             try {
-                analyzer.analyze(Paths.get("test"), "", rootModule, result -> {
+                analyzer.analyze(Paths.get("test"), "", result -> {
                     try {
                         System.out.println("Running 1");
                         sleep(500);
@@ -35,7 +35,7 @@ public class CancellationTest extends BaseCompletionTest {
         thread.start();
 
 //        sleep(2);
-        analyzer.analyze(Paths.get("test"), "", rootModule, analysisResult -> {
+        analyzer.analyze(Paths.get("test"), "", analysisResult -> {
             System.out.println("Running 2");
         });
         thread.join();

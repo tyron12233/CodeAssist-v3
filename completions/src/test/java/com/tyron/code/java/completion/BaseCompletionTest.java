@@ -41,7 +41,8 @@ public abstract class BaseCompletionTest {
 
         rootModule.setJdk(jdkModule);
 
-        analyzer = new Analyzer(fileManager, rootModule, (s -> {}));
+        analyzer = new Analyzer(fileManager, rootModule, (s -> {
+        }));
         completor = new Completor(fileManager, analyzer);
     }
 
@@ -67,7 +68,7 @@ public abstract class BaseCompletionTest {
         int line = offset[0];
         int column = offset[1];
 
-        CompletionResult completionResult = completor.getCompletionResult(rootModule, tempFile, line, column);
+        CompletionResult completionResult = completor.getCompletionResult(tempFile, line, column);
         return completionResult.getCompletionCandidates().stream()
                 .map(CompletionCandidate::getName)
                 .toList();

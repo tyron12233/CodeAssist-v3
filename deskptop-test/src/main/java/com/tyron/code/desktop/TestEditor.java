@@ -68,7 +68,7 @@ public class TestEditor extends JFrame {
 
                 DefaultParseResult parseResult = new DefaultParseResult(this);
                 try {
-                    analyzer.analyze(editingFile, doc.getText(0, doc.getLength()), javaModule, result -> {
+                    analyzer.analyze(editingFile, doc.getText(0, doc.getLength()), result -> {
                         System.out.println("Running background analysis");
                         try {
                             Thread.sleep(2000);
@@ -226,7 +226,7 @@ public class TestEditor extends JFrame {
             }
 
 
-            CompletionResult completionResult = completor.getCompletionResult(javaModule, editingFile, line, column);
+            CompletionResult completionResult = completor.getCompletionResult(editingFile, line, column);
 
             List<Completion> list = completionResult.getCompletionCandidates().stream()
                     .map(this::getCompletion)

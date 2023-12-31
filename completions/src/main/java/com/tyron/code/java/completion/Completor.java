@@ -33,6 +33,7 @@ public class Completor {
     private CompletionResult cachedCompletion = NO_CACHE;
 
     private final FileManager fileManager;
+
     private final Analyzer analyzer;
 
     public Completor(FileManager fileManager, Analyzer analyzer) {
@@ -40,7 +41,7 @@ public class Completor {
         this.analyzer = analyzer;
     }
 
-    public CompletionResult getCompletionResult(JavaModule module, Path file, int line, int column) {
+    public CompletionResult getCompletionResult(Path file, int line, int column) {
         // PositionContext gets the tree path whose leaf node includes the position
         // (position < node's endPosition). However, for completions, we want the leaf node either
         // includes the position, or just before the position (position == node's endPosition).
@@ -88,7 +89,6 @@ public class Completor {
                     computeCompletionResult(
                             file,
                             contentWithLineMap.getContent().toString(),
-                            module,
                             line,
                             column,
                             ((int) offset),
@@ -101,7 +101,6 @@ public class Completor {
     private CompletionResult computeCompletionResult(
             Path file,
             String fixedContents,
-            JavaModule module,
             int line,
             int column,
             int offset,
@@ -112,7 +111,8 @@ public class Completor {
         CompletableFuture<ImmutableList<CompletionCandidate>> future = new CompletableFuture<>();
 
         try {
-            analyzer.analyze(file, fixedContents, module, analysisResult -> {
+            analyzer.analyze(file, fixedContents, analysisResult -> {
+                JavaModule module = analysisResult.module();
                 JCTree.JCCompilationUnit jcCompilationUnit = (JCTree.JCCompilationUnit) analysisResult.parsedTree();
                 analyzer.checkCancelled();
 
