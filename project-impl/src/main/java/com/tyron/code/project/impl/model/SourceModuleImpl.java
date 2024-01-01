@@ -1,20 +1,18 @@
 package com.tyron.code.project.impl.model;
 
 import com.tyron.code.info.ClassInfo;
-import com.tyron.code.info.SourceClassInfo;
-import com.tyron.code.project.model.JavaFileInfo;
-import com.tyron.code.project.model.PackageScope;
 import com.tyron.code.project.model.module.SourceModule;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 public class SourceModuleImpl<T extends ClassInfo> extends AbstractModule implements SourceModule<T> {
-    private final List<T> classInfos;
+    private final Set<T> classInfos;
 
     public SourceModuleImpl(Path root) {
         super(root);
-        this.classInfos = new ArrayList<>();
+        this.classInfos = new HashSet<>();
     }
 
     public void addClass(T info) {
@@ -22,7 +20,7 @@ public class SourceModuleImpl<T extends ClassInfo> extends AbstractModule implem
     }
 
     @Override
-    public List<T> getFiles() {
+    public Set<T> getFiles() {
         return classInfos;
     }
 }

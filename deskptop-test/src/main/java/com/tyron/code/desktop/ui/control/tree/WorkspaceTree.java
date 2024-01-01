@@ -130,7 +130,7 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
                                     WorkspaceTreeNode.getOrInsertIntoTree(root, directoryPathNode);
                                 });
                     }
-                    List<SourceClassInfo> files = javaModule.getFiles();
+                    Set<SourceClassInfo> files = javaModule.getFiles();
                     files.forEach(file -> {
                         Path path = javaModule.getRootDirectory().relativize(file.getPath());
                         String directoryPath = path.getParent().toString();

@@ -108,7 +108,7 @@ public class TestEditor extends JFrame {
         pack();
         setLocationRelativeTo(null);
 
-        SourceClassInfo javaFileInfo = javaModule.getFiles().get(0);
+        SourceClassInfo javaFileInfo = javaModule.getFiles().stream().findAny().orElseThrow();
         textArea.setText(simpleFileManager.getFileContent(editingFile).orElseThrow().toString());
 
         textArea.getDocument().addDocumentListener(new DocumentListener() {

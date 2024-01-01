@@ -9,8 +9,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SourceModule<T extends ClassInfo>  extends Module {
 
-    List<T> getFiles();
+    Set<T> getFiles();
 }

@@ -33,7 +33,7 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
     }
 
     @Override
-    public List<SourceClassInfo> getFiles() {
+    public Set<SourceClassInfo> getFiles() {
         return super.getFiles();
     }
 
