@@ -36,7 +36,7 @@ public class Actions {
             String title = "Test.java";
             Node graphic = Icons.getIconView(Icons.CLASS);
 
-            SourcePane content = new SourcePane();
+            SourcePane content = new SourcePane(module);
             content.onUpdatePath(path);
 
             DockingTab tab = createTab(dockingManager.getPrimaryRegion(), title, graphic, content);

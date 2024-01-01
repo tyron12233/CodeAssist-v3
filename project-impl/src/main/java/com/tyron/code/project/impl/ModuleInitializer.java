@@ -104,6 +104,8 @@ public class ModuleInitializer {
                     .toList();
         } catch (IOException e) {
             throw new InitializationException(e.getMessage());
+        } finally {
+            Unchecked.run(() -> jarRoot.getFileSystem().close());
         }
     }
 }

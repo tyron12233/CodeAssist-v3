@@ -6,6 +6,8 @@ import com.tyron.code.desktop.ui.docking.DockingManager
 import com.tyron.code.desktop.ui.pane.WelcomePane
 import com.tyron.code.desktop.ui.pane.WorkspaceInformationPane
 import com.tyron.code.desktop.ui.pane.WorkspaceRootPane
+import com.tyron.code.java.analysis.Analyzer
+import com.tyron.code.java.completion.Completor
 import com.tyron.code.project.BasicWorkspaceManager
 import com.tyron.code.project.ModuleManager
 import com.tyron.code.project.Workspace
@@ -14,6 +16,8 @@ import com.tyron.code.project.file.FileManager
 import com.tyron.code.project.file.FileManagerImpl
 import com.tyron.code.project.impl.CodeAssistModuleManager
 import com.tyron.code.project.impl.WorkspaceImpl
+import com.tyron.code.project.model.module.JavaModule
+import com.tyron.code.project.model.module.Module
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import java.util.concurrent.Executors
@@ -41,6 +45,16 @@ val mainModule = module {
 
         scoped<ModuleManager> {
             CodeAssistModuleManager(get(), get<Workspace>().root)
+        }
+    }
+
+    scope<JavaModule> {
+        scoped<Completor> {
+            Completor(get(), get())
+        }
+
+        scoped<Analyzer> {
+            Analyzer(get(), get<JavaModule>()) {}
         }
     }
 }

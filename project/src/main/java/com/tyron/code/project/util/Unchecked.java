@@ -128,6 +128,11 @@ public class Unchecked {
 		return runnable;
 	}
 
+
+	public static void run(UncheckedRunnable runnable) {
+		runnable.run();
+	}
+
 	/**
 	 * Helper method to created unchecked supplier.
 	 *

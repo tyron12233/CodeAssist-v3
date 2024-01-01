@@ -49,7 +49,9 @@ public class Completor {
         // adjustedPosition == node's endPosition - 1 if the node is just before the actual position.
         int contextColumn = column > 0 ? column - 1 : 0;
 
-        FileContentFixer fileContentFixer = new FileContentFixer(new ParserContext());
+        ParserContext parserContext = new ParserContext();
+        parserContext.setupLoggingSource(file.toString());
+        FileContentFixer fileContentFixer = new FileContentFixer(parserContext);
 
         Optional<FileContentFixer.FixedContent> contents = fileManager.getFileContent(file)
                 .map(fileContentFixer::fixFileContent);
@@ -64,7 +66,7 @@ public class Completor {
         char c = adjustedContent.charAt((int) offset - 1);
         if (!Character.isJavaIdentifierPart(c) && c != '.') {
             // append dummy identifier so that we can complete in this context
-            Insertion insertion = Insertion.create((int) offset - 1, "dumbIdent");
+            Insertion insertion = Insertion.create((int) offset, "dumbIdent");
             adjustedContent = Insertion.applyInsertions(adjustedContent, List.of(insertion)).toString();
 
             adjustedLineMap = FileContentFixer.createAdjustedLineMap(
@@ -72,7 +74,7 @@ public class Completor {
                     List.of(insertion)
             );
 
-            offset = adjustedLineMap.getPosition(line + 1, column);
+            offset = adjustedLineMap.getPosition(line + 1, column + 1);
         }
 
 

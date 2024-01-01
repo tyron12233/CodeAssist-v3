@@ -6,24 +6,21 @@ import com.tyron.code.desktop.ui.control.richtext.Editor;
 import com.tyron.code.desktop.ui.control.richtext.bracket.BracketMatchGraphicFactory;
 import com.tyron.code.desktop.ui.control.richtext.bracket.SelectedBracketTracking;
 import com.tyron.code.desktop.ui.control.richtext.problem.ProblemGraphicFactory;
-import com.tyron.code.desktop.ui.control.richtext.source.CompletionProvider;
-import com.tyron.code.desktop.util.NodeEvents;
 import com.tyron.code.desktop.util.WorkspaceUtil;
 import com.tyron.code.info.SourceClassInfo;
+import com.tyron.code.java.analysis.Analyzer;
+import com.tyron.code.java.completion.CompletionCandidate;
+import com.tyron.code.java.completion.CompletionResult;
 import com.tyron.code.java.completion.Completor;
 import com.tyron.code.path.PathNode;
 import com.tyron.code.path.impl.SourceClassPathNode;
 import com.tyron.code.project.Workspace;
 import com.tyron.code.project.file.FileManager;
+import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.util.Unchecked;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
-import kotlin.jvm.JvmClassMappingKt;
 import org.fxmisc.richtext.model.TwoDimensional;
 import org.jetbrains.annotations.NotNull;
-import org.koin.core.component.KoinScopeComponent;
-import org.koin.core.component.KoinScopeComponentKt;
-import org.koin.core.scope.Scope;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.Collection;
@@ -33,12 +30,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
+    private final JavaModule javaModule;
     private Completor completor;
     protected final AtomicBoolean updateLock = new AtomicBoolean();
     protected final Editor editor;
     protected SourceClassPathNode pathNode;
 
-    public JavaEditorPane() {
+    public JavaEditorPane(JavaModule javaModule) {
+        this.javaModule = javaModule;
         // Configure the editor
         editor = new Editor();
         editor.setSelectedBracketTracking(new SelectedBracketTracking());
@@ -56,7 +55,9 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
             int offset = editor.getCodeArea().getCaretPosition();
             TwoDimensional.Position position = editor.getCodeArea().offsetToPosition(offset, TwoDimensional.Bias.Backward);
-            return null;
+            CompletionResult completionResult = completor.getCompletionResult(pathNode.getValue().getPath(), position.getMajor(), position.getMinor());
+            List<CompletionCandidate> completionCandidates = completionResult.getCompletionCandidates();
+            return completionCandidates.stream().map(CompletionCandidate::getName).toList();
         };
     }
 
@@ -90,11 +91,21 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
             this.pathNode = sourceClassPathNode;
             SourceClassInfo classInfo = sourceClassPathNode.getValue();
             Workspace workspace = KoinJavaComponent.get(Workspace.class);
-            completor = WorkspaceUtil.getScoped(workspace, Completor.class);
+
+
             FileManager fileManager = WorkspaceUtil.getScoped(workspace, FileManager.class);
             CharSequence contents = fileManager.getFileContent(classInfo.getPath()).orElseThrow();
-            Unchecked.runnable(() -> fileManager.openFileForSnapshot(classInfo.getPath().toUri(), contents.toString()));
+            Unchecked.runnable(() -> fileManager.openFileForSnapshot(classInfo.getPath().toUri(), contents.toString())).run();
             editor.setText(contents.toString());
+
+            editor.getTextChangeEventStream()
+                    .addObserver(plainTextChange -> {
+                        fileManager.setSnapshotContent(classInfo.getPath().toUri(), editor.getText());
+                    });
+
+            Analyzer analyzer = new Analyzer(fileManager, javaModule, __ -> {
+            });
+            completor = new Completor(fileManager, analyzer);
             updateLock.set(false);
         }
     }

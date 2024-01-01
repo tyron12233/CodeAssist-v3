@@ -25,7 +25,7 @@ public class JvmClassInfoImpl extends BasicClassInfo implements JvmClassInfo {
 
     @Override
     public byte @NotNull [] getBytecode() {
-        return new byte[0];
+        return bytecode;
     }
 
     @Override

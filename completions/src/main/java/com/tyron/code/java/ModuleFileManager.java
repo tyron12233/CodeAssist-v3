@@ -2,6 +2,7 @@ package com.tyron.code.java;
 
 import com.google.common.io.Files;
 import com.tyron.code.info.ClassInfo;
+import com.tyron.code.info.JvmClassInfo;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.parsing.MethodBodyPruner;
 import com.tyron.code.java.parsing.ParserContext;
@@ -12,16 +13,14 @@ import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.JdkModule;
 import com.tyron.code.project.util.ClassNameUtils;
 import com.tyron.code.project.util.ModuleUtils;
+import com.tyron.code.project.util.PathUtils;
 import com.tyron.code.project.util.StringSearch;
 import shadow.com.sun.tools.javac.api.JavacTool;
 import shadow.com.sun.tools.javac.file.JavacFileManager;
 import shadow.com.sun.tools.javac.tree.JCTree;
 import shadow.javax.tools.*;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -82,7 +81,7 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         // android.jar we provided in the classpath
         if (location.getClass().toString().contains("Module")) {
             return module.getJdkModule().getClasses().stream()
-                    .filter(it -> packageName.equals(it.getPackageName()))
+                    .filter(it -> packageName.replace('.', '/').equals(it.getPackageName()))
                     .map(c -> new ClassFileObject(module.getJdkModule().getPath(), c))
                     .map(c -> (JavaFileObject) c)
                     .toList();
@@ -170,9 +169,9 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
 
     private static class ClassFileObject extends SimpleJavaFileObject {
         private final Path pathInside;
-        private final ClassInfo c;
+        private final JvmClassInfo c;
 
-        protected ClassFileObject(Path jarPath, ClassInfo c) {
+        protected ClassFileObject(Path jarPath, JvmClassInfo c) {
             super(jarPath.toUri(), Kind.CLASS);
             this.pathInside = jarPath;
             this.c = c;
@@ -184,12 +183,12 @@ public class ModuleFileManager extends ForwardingJavaFileManager<StandardJavaFil
         }
 
         public String inferBinaryName(Iterable<? extends Path> paths) {
-            return c.getName();
+            return c.getName().replace('/', '.');
         }
 
         @Override
-        public InputStream openInputStream() throws IOException {
-            return java.nio.file.Files.newInputStream(pathInside);
+        public InputStream openInputStream() {
+            return new ByteArrayInputStream(c.getBytecode());
         }
     }
 }

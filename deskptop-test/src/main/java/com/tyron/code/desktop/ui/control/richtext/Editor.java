@@ -108,9 +108,9 @@ public class Editor extends BorderPane {
 		// Register a text change listener and use the inserted/removed text content to determine what portions
 		// of the document need to be restyled.
 		codeArea.plainTextChanges()
-				.reduceSuccessions(Collections::singletonList, (objects, plainTextChange) -> {
-					return Stream.concat(objects.stream(), Stream.of(plainTextChange)).toList();
-                }, Duration.ofMillis(SHORT_DELAY_MS))
+				.reduceSuccessions(Collections::singletonList, (objects, plainTextChange) ->
+						Stream.concat(objects.stream(), Stream.of(plainTextChange)).toList(), Duration.ofMillis(SHORT_DELAY_MS)
+				)
 				.addObserver(changes -> {
 					// Pass to highlighter.
 					if (syntaxHighlighter != null) {

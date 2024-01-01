@@ -4,9 +4,17 @@ import com.tyron.code.desktop.services.navigation.SourceFileNavigable;
 import com.tyron.code.desktop.services.navigation.UpdatableNavigable;
 import com.tyron.code.path.PathNode;
 import com.tyron.code.path.impl.SourceClassPathNode;
+import com.tyron.code.project.model.module.JavaModule;
+import com.tyron.code.project.model.module.Module;
 import org.jetbrains.annotations.NotNull;
 
 public class SourcePane extends AbstractContentPane<SourceClassPathNode> implements SourceFileNavigable {
+    private final Module module;
+
+    public SourcePane(Module module) {
+        this.module = module;
+    }
+
     @NotNull
     @Override
     public SourceClassPathNode getPath() {
@@ -34,6 +42,6 @@ public class SourcePane extends AbstractContentPane<SourceClassPathNode> impleme
 
     @Override
     protected void generateDisplay() {
-        setDisplay(new JavaEditorPane());
+        setDisplay(new JavaEditorPane(((JavaModule) module)));
     }
 }
