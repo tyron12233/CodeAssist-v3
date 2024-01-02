@@ -1,6 +1,5 @@
 package com.tyron.code.desktop
 
-import atlantafx.base.theme.PrimerDark
 import com.tyron.code.desktop.services.navigation.NavigationManager
 import com.tyron.code.desktop.ui.control.FontIconView
 import com.tyron.code.desktop.ui.docking.DockingManager
@@ -20,8 +19,6 @@ import javafx.scene.control.SplitPane
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import org.koin.core.component.getScopeId
-import org.koin.core.qualifier.TypeQualifier
-import org.koin.core.qualifier.named
 import org.koin.java.KoinJavaComponent.getKoin
 import org.koin.java.KoinJavaComponent.inject
 import org.kordamp.ikonli.carbonicons.CarbonIcons

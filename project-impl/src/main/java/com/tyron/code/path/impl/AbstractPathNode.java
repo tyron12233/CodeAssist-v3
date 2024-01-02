@@ -117,9 +117,12 @@ public abstract class AbstractPathNode<P, V> implements PathNode<V> {
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> T getValueOfType(@NotNull Class<T> type) {
-		if (getValueType().isAssignableFrom(type))
-			return (T) getValue();
-		if (parent == null) return null;
+		if (getValueType().isAssignableFrom(type)) {
+            return (T) getValue();
+        }
+		if (parent == null) {
+            return null;
+        }
 		return parent.getValueOfType(type);
 	}
 

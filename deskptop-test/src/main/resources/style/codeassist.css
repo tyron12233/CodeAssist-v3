@@ -4695,3 +4695,28 @@ Add support for NO_HEADER tweak in tables .table-view.no-header > .column-header
     -fx-opacity: 0.85;
     -fx-effect: dropshadow(three-pass-box, -color-shadow-default, 8px, 0px, 0, 2);
 }
+
+.ac-label {
+    -fx-font-family: "JetBrains Mono";
+}
+
+.ac-filled-in {
+    -fx-text-fill: -light-highlight-color;
+}
+
+.ac-not-filled-in {
+    -fx-text-fill: -default-text-color;
+}
+
+.selected-syntax {
+    -fx-background-color: -lighter-background-color;
+    -fx-alignment: center-left;
+}
+
+.selected-syntax .ac-not-filled-in {
+    -fx-text-fill: -lightest-color;
+}
+
+.selected-syntax .ac-filled-in {
+    -fx-text-fill: -highlight-color;
+}

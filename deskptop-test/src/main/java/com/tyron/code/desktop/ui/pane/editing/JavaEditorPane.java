@@ -5,7 +5,10 @@ import com.tyron.code.desktop.services.navigation.UpdatableNavigable;
 import com.tyron.code.desktop.ui.control.richtext.Editor;
 import com.tyron.code.desktop.ui.control.richtext.bracket.BracketMatchGraphicFactory;
 import com.tyron.code.desktop.ui.control.richtext.bracket.SelectedBracketTracking;
+import com.tyron.code.desktop.ui.control.richtext.completion.AutoCompletePopup;
 import com.tyron.code.desktop.ui.control.richtext.problem.ProblemGraphicFactory;
+import com.tyron.code.desktop.ui.control.richtext.source.CompletionProvider;
+import com.tyron.code.desktop.ui.control.richtext.syntax.RegexSyntaxHighlighter;
 import com.tyron.code.desktop.util.WorkspaceUtil;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.analysis.Analyzer;
@@ -48,17 +51,17 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
         setCenter(editor);
 
-        editor.completionProvider = editor -> {
+        CompletionProvider completionProvider = editor -> {
             if (completor == null) {
-                return List.of();
+                return CompletionResult.builder().build();
             }
 
             int offset = editor.getCodeArea().getCaretPosition();
             TwoDimensional.Position position = editor.getCodeArea().offsetToPosition(offset, TwoDimensional.Bias.Backward);
-            CompletionResult completionResult = completor.getCompletionResult(pathNode.getValue().getPath(), position.getMajor(), position.getMinor());
-            List<CompletionCandidate> completionCandidates = completionResult.getCompletionCandidates();
-            return completionCandidates.stream().map(CompletionCandidate::getName).toList();
+            return completor.getCompletionResult(pathNode.getValue().getPath(), position.getMajor(), position.getMinor());
         };
+        AutoCompletePopup popup = new AutoCompletePopup(completionProvider);
+        popup.install(editor);
     }
 
     @NotNull

@@ -33,7 +33,7 @@ public class Actions {
         Module module = path.getValueOfType(Module.class);
 
         return (SourceFileNavigable) getOrCreatePathContent(path, () -> {
-            String title = "Test.java";
+            String title = path.getValue().getSourceFileName();
             Node graphic = Icons.getIconView(Icons.CLASS);
 
             SourcePane content = new SourcePane(module);

@@ -9,8 +9,7 @@ import com.tyron.code.desktop.ui.control.FontIconView;
 import com.tyron.code.desktop.util.FxThreadUtils;
 import com.tyron.code.desktop.util.Icons;
 import com.tyron.code.info.SourceClassInfo;
-import com.tyron.code.path.impl.SourceClassPathNode;
-import com.tyron.code.path.impl.WorkspacePathNode;
+import com.tyron.code.path.impl.*;
 import com.tyron.code.project.dependency.DependencyUtil;
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.module.JavaModule;
@@ -19,8 +18,6 @@ import com.tyron.code.project.model.module.RootModule;
 import com.tyron.code.project.model.module.SourceModule;
 import com.tyron.code.project.util.StringUtil;
 import com.tyron.code.path.PathNode;
-import com.tyron.code.path.impl.DirectoryPathNode;
-import com.tyron.code.path.impl.ModulePathNode;
 import com.tyron.code.project.Workspace;
 import com.tyron.code.project.util.Unchecked;
 import javafx.scene.Node;
@@ -62,7 +59,15 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
                     return new FontIconView(CarbonIcons.WORKSPACE);
                 }
                 if (item instanceof DirectoryPathNode directoryPathNode) {
-                    return new FontIconView(CarbonIcons.FOLDER);
+                    JavaModule javaModule = directoryPathNode.getValueOfType(JavaModule.class);
+                    if (javaModule != null) {
+                        Path sourceDirectory = javaModule.getSourceDirectory();
+                        String value = directoryPathNode.getValue();
+                        if (sourceDirectory.endsWith(value)) {
+                            return Icons.getIconView(Icons.FOLDER_SRC);
+                        }
+                    }
+                    return Icons.getIconView(Icons.FOLDER);
                 }
                 if (item instanceof SourceClassPathNode) {
                     return Icons.getIconView(Icons.CLASS);
@@ -80,6 +85,7 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
                 if (item instanceof DirectoryPathNode directoryPathNode) {
                     return StringUtil.shortenPath(directoryPathNode.getValue());
                 }
+
                 if (item instanceof SourceClassPathNode s) {
                     this.setOnMouseClicked(event -> {
                         if (event.getClickCount() == 2) {
@@ -121,15 +127,6 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
 
                     Map<String, DirectoryPathNode> directories = new HashMap<>();
 
-                    try (var stream = Unchecked.get(() -> Files.walk(javaModule.getRootDirectory()))) {
-                        stream.filter(Files::isDirectory)
-                                .filter(it -> !it.equals(javaModule.getRootDirectory()))
-                                .forEach(it -> {
-                                    Path relative = javaModule.getRootDirectory().relativize(it);
-                                    DirectoryPathNode directoryPathNode = directories.computeIfAbsent(relative.toString(), d -> new DirectoryPathNode(modulePathNode, d));
-                                    WorkspaceTreeNode.getOrInsertIntoTree(root, directoryPathNode);
-                                });
-                    }
                     Set<SourceClassInfo> files = javaModule.getFiles();
                     files.forEach(file -> {
                         Path path = javaModule.getRootDirectory().relativize(file.getPath());
@@ -140,6 +137,17 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
                         SourceClassPathNode classPathNode = new SourceClassPathNode(directoryPathNode, file);
                         WorkspaceTreeNode.getOrInsertIntoTree(root, classPathNode, true);
                     });
+
+                    try (var stream = Unchecked.get(() -> Files.walk(javaModule.getRootDirectory()))) {
+                        stream.filter(Files::isDirectory)
+                                .filter(it -> !it.equals(javaModule.getRootDirectory()))
+                                .forEach(it -> {
+                                    Path relative = javaModule.getRootDirectory().relativize(it);
+                                    DirectoryPathNode directoryPathNode = directories.computeIfAbsent(relative.toString(), d -> new DirectoryPathNode(modulePathNode, d));
+                                    WorkspaceTreeNode.getOrInsertIntoTree(root, directoryPathNode);
+                                });
+                    }
+
                 }
             });
 

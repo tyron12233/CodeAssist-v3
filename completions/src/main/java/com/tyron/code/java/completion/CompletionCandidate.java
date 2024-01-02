@@ -41,6 +41,10 @@ public interface CompletionCandidate {
 
     String getName();
 
+    default Optional<String> getNameDescription() {
+        return Optional.empty();
+    }
+
     Kind getKind();
 
     Optional<String> getDetail();

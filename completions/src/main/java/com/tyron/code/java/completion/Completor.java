@@ -170,6 +170,7 @@ public class Completor {
     }
 
     private CompletionResult getCompletionCandidatesFromCache(int line, int column, String prefix) {
+
         ImmutableList<CompletionCandidate> narrowedCandidates =
                 new CompletionCandidateListBuilder(prefix)
                         .addCandidates(cachedCompletion.getCompletionCandidates())
