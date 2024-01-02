@@ -9,10 +9,10 @@ import java.util.Set;
 
 public class ModulePathNode extends AbstractPathNode<Object, Module>{
 
-    public static final String ID = "module";
+    public static final String TYPE_ID = "module";
 
     public ModulePathNode(Module module) {
-        super(ID, null, Module.class, module);
+        super(TYPE_ID, null, Module.class, module);
     }
 
     @Override

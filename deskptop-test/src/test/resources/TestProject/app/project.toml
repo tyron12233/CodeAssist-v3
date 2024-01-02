@@ -1,2 +1,10 @@
 name = ""
 moduleType = "JAVA"
+
+[[dependencies]]
+notation = "module2"
+type = "PROJECT"
+
+[[dependencies]]
+notation = "libs/guava-33.0.0-jre.jar"
+type = "FILE"

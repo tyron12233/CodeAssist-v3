@@ -1,6 +1,7 @@
 name = ""
 
 includedModules = [
-    "app"
+    "app",
+    "module2"
 ]
 
