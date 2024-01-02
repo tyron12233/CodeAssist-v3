@@ -2,15 +2,15 @@ package com.tyron.code.java.completion;
 
 import shadow.javax.lang.model.element.Element;
 
-public abstract class ElementBasedCompletionCandidate implements CompletionCandidate{
+public abstract class ElementBasedCompletionCandidate<T extends Element> implements CompletionCandidate{
 
-    private final Element element;
+    private final T element;
 
-    ElementBasedCompletionCandidate(Element element) {
+    ElementBasedCompletionCandidate(T element) {
         this.element = element;
     }
 
-    Element getElement() {
+    T getElement() {
         return element;
     }
 }

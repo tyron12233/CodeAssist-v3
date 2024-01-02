@@ -4,13 +4,14 @@ import shadow.javax.lang.model.element.Element;
 import shadow.javax.lang.model.element.ElementKind;
 import shadow.javax.lang.model.element.ExecutableElement;
 import shadow.javax.lang.model.element.TypeElement;
+import shadow.javax.lang.model.type.TypeMirror;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-public class ElementCompletionCandidate extends ElementBasedCompletionCandidate {
+public class ElementCompletionCandidate extends ElementBasedCompletionCandidate<Element> {
 
     private final Map<String, Object> objectsMap = new HashMap<>();
 
@@ -30,10 +31,6 @@ public class ElementCompletionCandidate extends ElementBasedCompletionCandidate 
 
     @Override
     public Optional<String> getDetail() {
-        if (getElement().getKind() == ElementKind.METHOD) {
-            ExecutableElement executableElement = ((ExecutableElement) getElement());
-            return Optional.of(executableElement.getParameters().toString());
-        }
         return Optional.empty();
     }
 
