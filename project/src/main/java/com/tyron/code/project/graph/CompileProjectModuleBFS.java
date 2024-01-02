@@ -16,10 +16,7 @@ public class CompileProjectModuleBFS extends GraphBFS<Module> {
     @Override
     protected Collection<Module> getChildren(Module node) {
         if (node instanceof JavaModule javaModule) {
-            return Stream.concat(
-                    Stream.of(javaModule.getJdkModule()),
-                    javaModule.getCompileOnlyDependencies().stream()
-            ).toList();
+            return javaModule.getCompileOnlyDependencies();
         }
         return Collections.emptyList();
     }

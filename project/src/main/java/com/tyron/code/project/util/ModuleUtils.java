@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 public class ModuleUtils {
 
@@ -28,22 +30,32 @@ public class ModuleUtils {
                 files.addAll(javaProject.getFiles().stream().map(SourceClassInfo::getPath).toList());
             }
         });
+        if (root instanceof JavaModule java) {
+            files.add(java.getJdkModule().getPath());
+        }
 
         return files;
     }
 
     public static List<ClassInfo> getFiles(String packageName, JavaModule projectModule) {
-        return projectModule.getFiles().stream()
+        Set<Module> compileOnlyDependencies = projectModule.getCompileOnlyDependencies();
+        // TODO: dependencies may expose other deps
+        return Stream.concat(Stream.of(projectModule), compileOnlyDependencies.stream())
+                .filter(it -> it instanceof JavaModule)
+                .map(it -> (JavaModule) it)
+                .flatMap(it -> it.getFiles().stream())
                 .filter(it -> packageName.equals(it.getPackageName()))
                 .map(it -> (ClassInfo) it)
                 .toList();
     }
 
-    public static List<ClassInfo> getAllClasses(JavaModule projectModule) {
+    public static Set<ClassInfo> getAllClasses(JavaModule projectModule) {
         CompileProjectModuleBFS compileModuleBFS = new CompileProjectModuleBFS(projectModule);
         ModuleFileCollectorVisitor visitor = new ModuleFileCollectorVisitor();
         compileModuleBFS.traverse(visitor);
-        return visitor.getAllFiles();
+        Set<ClassInfo> allFiles = visitor.getAllFiles();
+        allFiles.addAll(projectModule.getJdkModule().getFiles());
+        return allFiles;
     }
 
     public static List<Module> getDependenciesRecursive(JavaModule module) {

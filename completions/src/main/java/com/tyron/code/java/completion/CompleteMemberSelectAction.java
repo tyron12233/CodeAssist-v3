@@ -1,6 +1,7 @@
 package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableList;
+import com.tyron.code.info.ClassInfo;
 import com.tyron.code.java.analysis.AnalysisResult;
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.PackageScope;
@@ -21,6 +22,8 @@ import shadow.javax.lang.model.element.*;
 import shadow.javax.lang.model.type.*;
 
 import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
 
 public class CompleteMemberSelectAction implements CompletionAction {
     @Override
@@ -87,7 +90,35 @@ public class CompleteMemberSelectAction implements CompletionAction {
     }
 
     private ImmutableList<CompletionCandidate> completePackage(AnalysisResult analysisResult, Scope scope, Type.PackageType type, String prefix) {
-        return ImmutableList.of();
+        String packageName = type.toString().replace('.', '/');
+        final String[] packageParts;
+        if (!packageName.contains("/")) {
+            packageParts = new String[]{packageName};
+        } else {
+            packageParts = packageName.split("/");
+        }
+
+        Set<ClassInfo> allClasses = ModuleUtils.getAllClasses(analysisResult.module());
+
+        Set<CompletionCandidate> classes = allClasses.stream()
+                .filter(it -> packageName.equals(it.getPackageName()))
+                .map(it -> new SimpleCompletionCandidate(it.getSimpleName()))
+                .collect(Collectors.toSet());
+
+        Set<CompletionCandidate> packages = allClasses.stream()
+                .filter(it -> it.getPackageName() != null)
+                .filter(it -> it.getPackageName().startsWith(packageName))
+                .map(ClassInfo::getPackageNameParts)
+                .filter(it -> it.length == packageParts.length + 1)
+                .map(it -> it[it.length - 1])
+                .distinct()
+                .map(SimpleCompletionCandidate::new)
+                .collect(Collectors.toSet());
+
+        return ImmutableList.<CompletionCandidate>builder()
+                .addAll(classes)
+                .addAll(packages)
+                .build();
     }
 
     private ImmutableList<CompletionCandidate> completeArrayMemberSelect(boolean isStatic) {
@@ -139,7 +170,7 @@ public class CompleteMemberSelectAction implements CompletionAction {
                         if (!member.getModifiers().contains(Modifier.STATIC)) {
                             return;
                         }
-                     }
+                    }
                     if (member.getKind() == ElementKind.METHOD) {
                         putMethod((ExecutableElement) member, methods);
                     } else {
@@ -192,8 +223,6 @@ public class CompleteMemberSelectAction implements CompletionAction {
 
     private CompletionCandidate method(AnalysisResult analysisResult, List<ExecutableElement> overloads, boolean addParens) {
         var first = overloads.get(0);
-        ElementCompletionCandidate candidate = new ElementCompletionCandidate(first);
-        candidate.putData("ADD_PARENS", false);
-        return candidate;
+        return new ExecutableElementCompletionCandidate(first);
     }
 }

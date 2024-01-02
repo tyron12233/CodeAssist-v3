@@ -7,17 +7,19 @@ import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.Module;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ModuleFileCollectorVisitor implements NodeVisitor<Module> {
 
-    private final List<ClassInfo> allFiles = new ArrayList<>();
+    private final Set<ClassInfo> allFiles = new HashSet<>();
 
     public ModuleFileCollectorVisitor() {
 
     }
 
-    public List<ClassInfo> getAllFiles() {
+    public Set<ClassInfo> getAllFiles() {
         return allFiles;
     }
 
