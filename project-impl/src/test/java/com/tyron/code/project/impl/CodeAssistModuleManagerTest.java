@@ -79,7 +79,7 @@ class CodeAssistModuleManagerTest {
         assertEquals("app", app.getName());
 
         JavaModule project = ((JavaModule) app);
-        List<JavaFileInfo> files = project.getFiles();
+        List<JavaFileInfo> files = project.getSourceFiles();
         assert !files.isEmpty();
     }
 }

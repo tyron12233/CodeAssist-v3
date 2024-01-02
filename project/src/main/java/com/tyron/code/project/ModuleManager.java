@@ -17,13 +17,28 @@ public interface ModuleManager {
 
     Optional<JavaFileInfo> getFileItem(Path path);
 
-    void addOrUpdateFile(Path path);
+    default void addOrUpdateFile(Path path) {
+        throw new UnsupportedOperationException();
+    }
 
     /** Remove a file from modules. */
-    void removeFile(Path path);
+    default void removeFile(Path path) {
+        throw new UnsupportedOperationException();
+    }
 
     /** Add a module that all modules loaded by the module manager depends on. */
-    void addDependingModule(Module module);
+    default void addDependingModule(Module module) {
+        throw new UnsupportedOperationException();
+    }
 
     RootModule getRootModule();
+
+    /**
+     * Find the module that contains the given file.
+     * @param file The file to find the module for.
+     * @return The module that contains the given file, or empty if no module contains the file.
+     */
+    default Optional<Module> findModule(Path file) {
+        return Optional.empty();
+    }
 }

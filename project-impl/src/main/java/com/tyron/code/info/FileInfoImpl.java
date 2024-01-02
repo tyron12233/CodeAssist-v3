@@ -1,5 +1,6 @@
 package com.tyron.code.info;
 
+import com.tyron.code.info.builder.FileInfoBuilder;
 import com.tyron.code.info.properties.Property;
 import com.tyron.code.info.properties.PropertyContainer;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +27,12 @@ public class FileInfoImpl implements FileInfo {
         this.name = name;
         this.rawContent = rawContent;
         this.properties = properties;
+    }
+
+    public FileInfoImpl(FileInfoBuilder<?> builder) {
+        this.name = builder.getName();
+        this.properties = builder.getProperties();
+        this.rawContent = builder.getRawContent();
     }
 
     @Override

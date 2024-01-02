@@ -55,6 +55,7 @@ public class Icons {
 
 	public static final String FOLDER_MODULE = "icons/file/folder-module.png";
 	// Files
+	public static final String FILE_CONFIG = "icons/file/file-config.png";
 	public static final String FILE_BINARY = "icons/file/binary.png";
 	public static final String FILE_TEXT = "icons/file/text.png";
 	public static final String FILE_CODE = "icons/file/text-code.png";

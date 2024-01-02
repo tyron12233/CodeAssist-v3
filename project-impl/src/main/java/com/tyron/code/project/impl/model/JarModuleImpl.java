@@ -4,8 +4,6 @@ import com.tyron.code.info.JvmClassInfo;
 import com.tyron.code.project.model.module.JarModule;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class JarModuleImpl extends SourceModuleImpl<JvmClassInfo> implements JarModule {
@@ -23,7 +21,7 @@ public class JarModuleImpl extends SourceModuleImpl<JvmClassInfo> implements Jar
 
     @Override
     public Set<JvmClassInfo> getClasses() {
-        return getFiles();
+        return getSourceFiles();
     }
 
 }

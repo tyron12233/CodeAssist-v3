@@ -3,6 +3,7 @@ package com.tyron.code.project.impl;
 import com.google.common.collect.ImmutableMap;
 import com.tyron.code.info.JvmClassInfo;
 import com.tyron.code.info.SourceClassInfo;
+import com.tyron.code.info.builder.FileInfoBuilder;
 import com.tyron.code.info.builder.JvmClassInfoBuilder;
 import com.tyron.code.info.builder.SourceClassInfoBuilder;
 import com.tyron.code.logging.Logging;
@@ -54,6 +55,15 @@ public class ModuleInitializer {
         if (!Files.exists(project.getSourceDirectory())) {
             logger.warn("Source directory does not exist for project: {}", project.getName());
             return;
+        }
+
+        // add regular files to the project
+        try (var stream = Unchecked.get(() -> Files.walk(project.getRootDirectory()))) {
+            stream.filter(Files::isRegularFile)
+                    .filter(it -> !it.getFileName().toString().endsWith(".java"))
+                    .map(FileInfoBuilder::new)
+                    .map(FileInfoBuilder::build)
+                    .forEach(((JavaModuleImpl) project)::addFile);
         }
 
         logger.debug("Initializing java project: {}", project.getName());

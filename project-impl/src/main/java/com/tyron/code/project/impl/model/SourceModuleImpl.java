@@ -20,7 +20,7 @@ public class SourceModuleImpl<T extends ClassInfo> extends AbstractModule implem
     }
 
     @Override
-    public Set<T> getFiles() {
+    public Set<T> getSourceFiles() {
         return classInfos;
     }
 }

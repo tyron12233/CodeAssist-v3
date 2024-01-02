@@ -11,8 +11,8 @@ public class ErroneousRootModuleImpl extends RootModuleImpl implements Erroneous
 
     private final List<ProjectError> errors;
 
-    public ErroneousRootModuleImpl(Path rootDirectory, List<ProjectError> errors) {
-        super(rootDirectory, List.of());
+    public ErroneousRootModuleImpl(Path rootDirectory, List<Module> includedModules, List<ProjectError> errors) {
+        super(rootDirectory, includedModules);
         this.errors = errors;
     }
 

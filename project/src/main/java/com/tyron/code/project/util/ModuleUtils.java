@@ -4,14 +4,12 @@ import com.tyron.code.info.ClassInfo;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.project.graph.CompileProjectModuleBFS;
 import com.tyron.code.project.graph.ModuleFileCollectorVisitor;
-import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.module.JarModule;
 import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.Module;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -27,7 +25,7 @@ public class ModuleUtils {
             if (currentNode instanceof JarModule jarModule) {
                 files.add(jarModule.getPath());
             } else if (currentNode instanceof JavaModule javaProject) {
-                files.addAll(javaProject.getFiles().stream().map(SourceClassInfo::getPath).toList());
+                files.addAll(javaProject.getSourceFiles().stream().map(SourceClassInfo::getPath).toList());
             }
         });
         if (root instanceof JavaModule java) {
@@ -43,7 +41,7 @@ public class ModuleUtils {
         return Stream.concat(Stream.of(projectModule), compileOnlyDependencies.stream())
                 .filter(it -> it instanceof JavaModule)
                 .map(it -> (JavaModule) it)
-                .flatMap(it -> it.getFiles().stream())
+                .flatMap(it -> it.getSourceFiles().stream())
                 .filter(it -> packageName.equals(it.getPackageName()))
                 .map(it -> (ClassInfo) it)
                 .toList();
@@ -54,7 +52,7 @@ public class ModuleUtils {
         ModuleFileCollectorVisitor visitor = new ModuleFileCollectorVisitor();
         compileModuleBFS.traverse(visitor);
         Set<ClassInfo> allFiles = visitor.getAllFiles();
-        allFiles.addAll(projectModule.getJdkModule().getFiles());
+        allFiles.addAll(projectModule.getJdkModule().getSourceFiles());
         return allFiles;
     }
 

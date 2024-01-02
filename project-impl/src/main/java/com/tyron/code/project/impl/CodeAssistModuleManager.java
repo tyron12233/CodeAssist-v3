@@ -4,6 +4,8 @@ import com.tyron.code.logging.Logging;
 import com.tyron.code.project.InitializationException;
 import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
+import com.tyron.code.project.graph.GraphBFS;
+import com.tyron.code.project.graph.NodeVisitor;
 import com.tyron.code.project.impl.model.RootModuleImpl;
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.ProjectError;
@@ -42,11 +44,6 @@ public class CodeAssistModuleManager implements ModuleManager {
         ProjectStructureParser parser = new ProjectStructureParser();
         rootProject = parser.parse(rootDirectory);
 
-        if (rootProject instanceof ErroneousRootModule) {
-            logger.error("Project contains errors, aborting initialization");
-            return;
-        }
-
         ModuleInitializer initializer = new ModuleInitializer();
         initializer.initializeModules(
                 Stream.concat(
@@ -63,22 +60,19 @@ public class CodeAssistModuleManager implements ModuleManager {
     }
 
     @Override
-    public void addOrUpdateFile(Path path) {
-
-    }
-
-    @Override
-    public void removeFile(Path path) {
-
-    }
-
-    @Override
-    public void addDependingModule(Module module) {
-
-    }
-
-    @Override
     public RootModule getRootModule() {
         return rootProject;
+    }
+
+    @Override
+    public Optional<Module> findModule(Path file) {
+        List<Module> includedModules = getRootModule().getIncludedModules();
+        for (Module module : includedModules) {
+            Path moduleRoot = module.getRootDirectory();
+            if (file.startsWith(moduleRoot)) {
+                return Optional.of(module);
+            }
+        }
+        return Optional.empty();
     }
 }

@@ -1,6 +1,5 @@
 package com.tyron.code.project.impl.model;
 
-import com.tyron.code.info.ClassInfo;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.JdkModule;
@@ -33,8 +32,8 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
     }
 
     @Override
-    public Set<SourceClassInfo> getFiles() {
-        return super.getFiles();
+    public Set<SourceClassInfo> getSourceFiles() {
+        return super.getSourceFiles();
     }
 
     @Override

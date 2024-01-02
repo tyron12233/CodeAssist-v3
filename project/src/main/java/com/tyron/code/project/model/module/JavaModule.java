@@ -20,5 +20,5 @@ public interface JavaModule extends SourceModule<SourceClassInfo> {
      */
     JdkModule getJdkModule();
 
-    Set<SourceClassInfo> getFiles();
+    Set<SourceClassInfo> getSourceFiles();
 }

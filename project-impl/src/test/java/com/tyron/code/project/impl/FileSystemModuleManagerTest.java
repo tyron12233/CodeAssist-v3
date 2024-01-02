@@ -1,17 +1,14 @@
 package com.tyron.code.project.impl;
 
-import com.tyron.code.info.ClassInfo;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.project.file.SimpleFileManager;
 import com.tyron.code.project.impl.model.JavaModuleImpl;
-import com.tyron.code.project.model.JavaFileInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,11 +33,11 @@ class FileSystemModuleManagerTest {
         Path testJavaFile = root.resolve("Test.java");
         Files.createFile(testJavaFile);
 
-        Set<SourceClassInfo> files = module.getFiles();
+        Set<SourceClassInfo> files = module.getSourceFiles();
         assertEquals(0, files.size());
 
         manager.addOrUpdateFile(testJavaFile);
-        files = module.getFiles();
+        files = module.getSourceFiles();
         assertEquals(1, files.size());
 
         SourceClassInfo file = files.iterator().next();

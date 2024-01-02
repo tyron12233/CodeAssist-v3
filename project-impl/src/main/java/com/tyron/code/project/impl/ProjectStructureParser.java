@@ -1,17 +1,24 @@
 package com.tyron.code.project.impl;
 
 import com.google.common.collect.ImmutableList;
+import com.tyron.code.info.builder.FileInfoBuilder;
 import com.tyron.code.logging.Logging;
+import com.tyron.code.project.InitializationException;
 import com.tyron.code.project.impl.config.ModuleConfig;
 import com.tyron.code.project.impl.model.*;
 import com.tyron.code.project.model.ProjectError;
 import com.tyron.code.project.model.module.ErroneousRootModule;
 import com.tyron.code.project.model.module.JarModule;
 import com.tyron.code.project.model.module.Module;
+import com.tyron.code.project.util.Unchecked;
 import org.slf4j.Logger;
 import red.jackf.tomlconfig.TOMLConfig;
+import red.jackf.tomlconfig.settings.FailMode;
 
 import java.io.IOException;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,91 +26,107 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class ProjectStructureParser {
 
     private static final Logger logger = Logging.get(ProjectStructureParser.class);
 
-    private static final String PROJECT_CONFIG_NAME = "project.toml";
-
-    private static final TOMLConfig TOML_CONFIG = TOMLConfig.get();
+    private static final TOMLConfig TOML_CONFIG = TOMLConfig.builder()
+            .withReadFailMode(FailMode.THROW)
+            .build();
 
     private final Map<String, Module> includedProjects;
     private final Map<Module, ModuleConfig> configMap;
 
-    private final List<ProjectError> errors;
+    private final List<ProjectError> rootErrors = new ArrayList<>();
+
 
     public ProjectStructureParser() {
         includedProjects = new HashMap<>();
-        errors = new ArrayList<>();
         configMap = new HashMap<>();
     }
 
-    public List<ProjectError> getErrors() {
-        return errors;
-    }
-
     public RootModuleImpl parse(Path rootDirectory) {
-        try {
-            return parseImpl(rootDirectory);
-        } catch (RuntimeException e) {
-            if (e.getCause() instanceof IOException ioException) {
-                errors.add(new ProjectError(ioException.getClass().getName() + ": " + ioException.getMessage()));
-            }
-
-            return new ErroneousRootModuleImpl(rootDirectory, errors);
-        }
+        return parseImpl(rootDirectory);
     }
 
     private RootModuleImpl parseImpl(Path rootDirectory) {
         logger.debug("Parsing project structure at: " + rootDirectory);
 
-        Path rootConfig = rootDirectory.resolve(PROJECT_CONFIG_NAME);
+        Path rootConfig = rootDirectory.resolve(Module.CONFIG_NAME);
+        if (!Files.exists(rootConfig)) {
+            rootErrors.add(new ProjectError("Root configuration does not exist."));
+            return new ErroneousRootModuleImpl(rootDirectory, List.of(), rootErrors);
+        }
+
         ModuleConfig rootModuleConfig = TOML_CONFIG.readConfig(ModuleConfig.class, rootConfig);
+
+        if (rootModuleConfig.moduleType == ModuleConfig.ModuleType.JAVA) {
+            rootErrors.add(new ProjectError("JAVA type is not supported on root projects."));
+            return new ErroneousRootModuleImpl(rootDirectory, List.of(), rootErrors);
+        }
 
         List<Path> includedProjectPaths = rootModuleConfig.includedModules.stream().map(rootDirectory::resolve).toList();
         includedProjectPaths.stream().filter(path -> !Files.exists(path))
-                .forEach(nonExistent -> errors.add(new ProjectError("Included path does not exisit: " + nonExistent)));
+                .forEach(nonExistent -> rootErrors.add(new ProjectError("Included path does not exist: " + nonExistent)));
 
         logger.debug("Found " + includedProjectPaths.size() + " included project(s).");
 
         List<Path> existingProjectPaths = includedProjectPaths.stream()
                 .filter(Files::exists)
                 .toList();
-        existingProjectPaths.forEach(this::processIncludedProject);
+        for (Path existingProjectPath : existingProjectPaths) {
+            try {
+                processIncludedProject(existingProjectPath);
+            } catch (InitializationException e) {
+                includedProjects.put(
+                        existingProjectPath.getFileName().toString(),
+                        new ErroneousModuleImpl(existingProjectPath, List.of(new ProjectError(e.getMessage())))
+                );
+            }
+        }
 
         resolveProjectDependencies();
+
+        if (!rootErrors.isEmpty()) {
+            return new ErroneousRootModuleImpl(rootDirectory, ImmutableList.copyOf(includedProjects.values()), rootErrors);
+        }
 
         return new RootModuleImpl(rootDirectory, ImmutableList.copyOf(includedProjects.values()));
     }
 
-    private void processIncludedProject(Path path) {
-        Path configPath = path.resolve(PROJECT_CONFIG_NAME);
+    private void processIncludedProject(Path path) throws InitializationException {
+        Path configPath = path.resolve(Module.CONFIG_NAME);
         if (!Files.exists(configPath)) {
-            errors.add(new ProjectError("Configuration " + path + " does not exist."));
-            return;
+            throw new InitializationException("Included project does not have a configuration file: " + configPath);
         }
 
-        ModuleConfig moduleConfig = TOML_CONFIG.readConfig(ModuleConfig.class, configPath);
+        ModuleConfig moduleConfig;
+        try {
+             moduleConfig = TOML_CONFIG.readConfig(ModuleConfig.class, configPath);
+        } catch (RuntimeException e) {
+            throw new InitializationException(e.getCause().getMessage());
+        }
         if (moduleConfig.moduleType == ModuleConfig.ModuleType.DEFAULT) {
-            errors.add(new ProjectError("DEFAULT type is not supported on child projects."));
-            return;
+            throw new InitializationException("Included project does not have a module type: " + configPath);
         }
 
-        AbstractModule module = null;
+        final AbstractModule module;
         if (moduleConfig.moduleType == ModuleConfig.ModuleType.JAVA) {
             module = new JavaModuleImpl(path);
+        } else {
+            throw new InitializationException("Unsupported module type: " + moduleConfig.moduleType);
         }
 
-        if (module == null) {
-            errors.add(new ProjectError("Unsupported project: " + path));
-            return;
-        }
 
         String name = moduleConfig.name.isEmpty() ? path.getFileName().toString() : moduleConfig.name;
         module.setName(name);
 
-        includedProjects.put(name, module);
+        Module old = includedProjects.put(name, module);
+        if (old != null) {
+            throw new InitializationException("Duplicate module name: " + name);
+        }
         configMap.put(module, moduleConfig);
     }
 
@@ -111,7 +134,7 @@ public class ProjectStructureParser {
         includedProjects.values().forEach(includedProject -> {
             ModuleConfig moduleConfig = configMap.get(includedProject);
             if (moduleConfig == null) {
-                errors.add(new ProjectError("Module " + includedProject.getName() + " was included but no configuration was parsed."));
+                rootErrors.add(new ProjectError("Module " + includedProject.getName() + " was included but no configuration was parsed."));
                 return;
             }
 
@@ -124,7 +147,8 @@ public class ProjectStructureParser {
             if (includedProject instanceof JavaModuleImpl javaModule) {
                 logger.debug("Using default JDK");
                 Path path = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/completions/src/test/resources/android.jar");
-                javaModule.setJdk(new JdkModuleImpl(path, "11"));
+                JdkModuleImpl jdkModule = new JdkModuleImpl(path, "11");
+                javaModule.setJdk(jdkModule);
             }
         });
     }
@@ -140,13 +164,13 @@ public class ProjectStructureParser {
     private void handleFileDependency(Module includedProject, ModuleConfig.Dependency dependency) {
         String notation = dependency.notation;
         if (notation.startsWith("/")) {
-            errors.add(new ProjectError("Absolute paths are not supported. Notation: " + notation));
+            rootErrors.add(new ProjectError("Absolute paths are not supported. Notation: " + notation));
             return;
         }
         Path path = Paths.get(notation);
         Path resolvedPath = includedProject.getRootDirectory().resolve(path);
         if (!Files.exists(resolvedPath)) {
-            errors.add(new ProjectError("File dependency does not exist at: " + resolvedPath));
+            rootErrors.add(new ProjectError("File dependency does not exist at: " + resolvedPath));
             return;
         }
 
@@ -157,14 +181,14 @@ public class ProjectStructureParser {
     }
 
     private void handleMavenDependency(Module indcludedProject, ModuleConfig.Dependency dependency) {
-        errors.add(new ProjectError("Maven libraries are not yet supported."));
+        rootErrors.add(new ProjectError("Maven libraries are not yet supported."));
     }
 
     private void handleProjectDependency(Module includedProject, ModuleConfig.Dependency dependency) {
         String notation = dependency.notation;
         Module module = includedProjects.get(notation);
         if (module == null) {
-            errors.add(new ProjectError("Unable to find module " + notation));
+            rootErrors.add(new ProjectError("Unable to find module " + notation));
             return;
         }
 

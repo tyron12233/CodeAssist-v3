@@ -6,7 +6,11 @@ import com.tyron.code.info.properties.BasicPropertyContainer;
 import com.tyron.code.info.properties.Property;
 import com.tyron.code.info.properties.PropertyContainer;
 import com.tyron.code.project.util.StringUtil;
+import com.tyron.code.project.util.Unchecked;
 import org.jetbrains.annotations.NotNull;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class FileInfoBuilder<B extends FileInfoBuilder<?>> {
 
@@ -16,6 +20,12 @@ public class FileInfoBuilder<B extends FileInfoBuilder<?>> {
 
     public FileInfoBuilder() {
         // default
+    }
+
+    public FileInfoBuilder(Path file) {
+        withName(file.toString());
+        withRawContent(Unchecked.get(() -> Files.readAllBytes(file)));
+        withProperties(new BasicPropertyContainer());
     }
 
     protected FileInfoBuilder(@NotNull FileInfo fileInfo) {
@@ -74,7 +84,6 @@ public class FileInfoBuilder<B extends FileInfoBuilder<?>> {
 //        if (StringUtil.isText(rawContent)) {
 //            return new BasicTextFileInfo(this);
 //        } else
-//            return new BasicFileInfo(this);
-        throw new UnsupportedOperationException();
+        return new FileInfoImpl(this);
     }
 }
