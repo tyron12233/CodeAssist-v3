@@ -46,11 +46,13 @@ public class Analyzer {
     }
 
     private void analyzeInternal(Path path, String contents, Consumer<AnalysisResult> consumer) {
-        if (currentTask != null) {
+        if (currentTask != null && !currentTask.isDone()) {
             cancelled.set(true);
             try {
                 currentTask.cancel(true);
                 currentTask.get(); // Wait for completion before starting new
+
+                currentTask = null;
             } catch (Exception e) {
                 handleCancellationException(e);
             } finally {
