@@ -107,7 +107,7 @@ public class NavigationManager implements Navigable {
 //                // For dependent beans, we are likely not going to see them ever again.
 //                // Call disable to clean them up.
 //                if (value.getClass().getDeclaredAnnotation(Dependent.class) != null)
-//                    navigable.disable();
+                    navigable.disable();
             }
         }
     }

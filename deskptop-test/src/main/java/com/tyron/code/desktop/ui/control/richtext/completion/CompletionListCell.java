@@ -9,7 +9,11 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 public class CompletionListCell extends ListCell<CompletionCandidate> {
@@ -57,8 +61,13 @@ public class CompletionListCell extends ListCell<CompletionCandidate> {
             label.setAlignment(Pos.CENTER_LEFT);
             labelDesc.setTextOverrun(OverrunStyle.ELLIPSIS);
 
+            VBox box = new VBox();
+            box.setAlignment(Pos.CENTER_RIGHT);
+            getChildren().add(box);
+
             details.setFont(new Font("Jetbrains Mono", 14));
             details.setAlignment(Pos.CENTER_RIGHT);
+            box.getChildren().add(details);
         }
 
         public void setCompletionCandidate(CompletionCandidate item) {

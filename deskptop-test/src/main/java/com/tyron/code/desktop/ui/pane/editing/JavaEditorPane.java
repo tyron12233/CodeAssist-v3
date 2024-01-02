@@ -8,7 +8,6 @@ import com.tyron.code.desktop.ui.control.richtext.bracket.SelectedBracketTrackin
 import com.tyron.code.desktop.ui.control.richtext.completion.AutoCompletePopup;
 import com.tyron.code.desktop.ui.control.richtext.problem.ProblemGraphicFactory;
 import com.tyron.code.desktop.ui.control.richtext.source.CompletionProvider;
-import com.tyron.code.desktop.ui.control.richtext.syntax.RegexSyntaxHighlighter;
 import com.tyron.code.desktop.util.WorkspaceUtil;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.analysis.Analyzer;
@@ -58,7 +57,7 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
             int offset = editor.getCodeArea().getCaretPosition();
             TwoDimensional.Position position = editor.getCodeArea().offsetToPosition(offset, TwoDimensional.Bias.Backward);
-            return completor.getCompletionResult(pathNode.getValue().getPath(), position.getMajor(), position.getMinor());
+            return completor.getCompletionResult(pathNode.getValue().getPath().toAbsolutePath(), position.getMajor(), position.getMinor());
         };
         AutoCompletePopup popup = new AutoCompletePopup(completionProvider);
         popup.install(editor);
@@ -97,14 +96,12 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
 
             FileManager fileManager = WorkspaceUtil.getScoped(workspace, FileManager.class);
-            CharSequence contents = fileManager.getFileContent(classInfo.getPath()).orElseThrow();
+            CharSequence contents = fileManager.getFileContent(classInfo.getPath().toAbsolutePath()).orElseThrow();
             Unchecked.runnable(() -> fileManager.openFileForSnapshot(classInfo.getPath().toUri(), contents.toString())).run();
             editor.setText(contents.toString());
 
             editor.getTextChangeEventStream()
-                    .addObserver(plainTextChange -> {
-                        fileManager.setSnapshotContent(classInfo.getPath().toUri(), editor.getText());
-                    });
+                    .addObserver(plainTextChange -> fileManager.setSnapshotContent(classInfo.getPath().toUri(), editor.getText()));
 
             Analyzer analyzer = new Analyzer(fileManager, javaModule, __ -> {
             });

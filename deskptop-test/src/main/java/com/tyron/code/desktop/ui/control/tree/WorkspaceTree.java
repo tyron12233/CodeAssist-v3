@@ -30,6 +30,7 @@ import org.kordamp.ikonli.carbonicons.CarbonIcons;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class WorkspaceTree extends TreeView<PathNode<?>> {
@@ -61,23 +62,25 @@ public class WorkspaceTree extends TreeView<PathNode<?>> {
                 if (item instanceof DirectoryPathNode directoryPathNode) {
                     JavaModule javaModule = directoryPathNode.getValueOfType(JavaModule.class);
                     if (javaModule != null) {
-                        Path sourceDirectory = javaModule.getSourceDirectory();
+                        Path rootDirectory = javaModule.getRootDirectory();
+                        Path sourceDirectory = rootDirectory.relativize(javaModule.getSourceDirectory());
                         String value = directoryPathNode.getValue();
-                        if (sourceDirectory.endsWith(value)) {
+                        if (sourceDirectory.toString().equals(value)) {
                             return Icons.getIconView(Icons.FOLDER_SRC);
+                        }
+
+                        boolean inSourceDir = Paths.get(value).startsWith(sourceDirectory);
+                        if (inSourceDir) {
+                            return Icons.getIconView(Icons.FOLDER_PACKAGE);
                         }
                     }
                     return Icons.getIconView(Icons.FOLDER);
                 }
-                if (item instanceof SourceClassPathNode) {
+                if (item instanceof SourceClassPathNode pathNode) {
                     return Icons.getIconView(Icons.CLASS);
                 }
                 if (item instanceof ModulePathNode modulePathNode) {
-                    Module value = modulePathNode.getValue();
-                    if (value instanceof JavaModule javaModule) {
-                        return new FontIconView(CarbonIcons.FOLDER_SHARED);
-                    }
-                }
+                    return Icons.getIconView(Icons.FOLDER_MODULE);                }
                 return null;
             }
 

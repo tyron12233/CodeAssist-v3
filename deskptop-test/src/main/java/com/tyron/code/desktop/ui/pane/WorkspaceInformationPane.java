@@ -2,6 +2,7 @@ package com.tyron.code.desktop.ui.pane;
 
 import atlantafx.base.theme.Styles;
 import com.tyron.code.project.Workspace;
+import com.tyron.code.project.graph.GraphPrinter;
 import com.tyron.code.project.model.module.RootModule;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;

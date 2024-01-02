@@ -32,13 +32,6 @@ public class ExecutableElementCompletionCandidate extends ElementBasedCompletion
 
     @Override
     public Optional<String> getDetail() {
-        return Optional.of("");
-    }
-
-    private String getSimpleName(TypeMirror typeMirror) {
-        if (typeMirror.getKind() == TypeKind.DECLARED) {
-            return ((shadow.javax.lang.model.type.DeclaredType) typeMirror).asElement().getSimpleName().toString();
-        }
-        return typeMirror.toString();
+        return Optional.of(PrintUtil.getSimpleName(getElement().getReturnType()));
     }
 }

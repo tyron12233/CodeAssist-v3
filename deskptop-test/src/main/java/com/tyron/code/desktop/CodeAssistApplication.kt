@@ -70,7 +70,7 @@ class CodeAssistApplication : Application(), WorkspaceCloseListener, WorkspaceOp
     }
 
     private fun testInit() {
-        val root = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/deskptop-test/src/test/resources/TestProject")
+        val root = Paths.get("deskptop-test/src/test/resources/TestProject")
 
         logger.debug("Initializing workspace at {}", root)
 

@@ -1,32 +1,24 @@
 package com.tyron.code.desktop.ui.control.richtext.completion;
 
-import com.tyron.code.desktop.ui.control.IconView;
 import com.tyron.code.desktop.ui.control.richtext.Editor;
 import com.tyron.code.desktop.ui.control.richtext.EditorComponent;
 import com.tyron.code.desktop.ui.control.richtext.source.CompletionProvider;
 import com.tyron.code.desktop.util.FxThreadUtils;
-import com.tyron.code.desktop.util.Icons;
 import com.tyron.code.java.completion.CompletionCandidate;
 import com.tyron.code.java.completion.CompletionResult;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.effect.BlurType;
-import javafx.scene.effect.DropShadow;
-import javafx.scene.input.KeyCode;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.*;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 import javafx.stage.Popup;
-import javafx.util.Callback;
 import org.fxmisc.richtext.model.PlainTextChange;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,13 +26,10 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-
-import static com.tyron.code.desktop.ui.control.richtext.Editor.SHORT_DELAY_MS;
 
 public class AutoCompletePopup extends Popup implements EditorComponent, Consumer<List<PlainTextChange>> {
 
@@ -58,22 +47,6 @@ public class AutoCompletePopup extends Popup implements EditorComponent, Consume
 
     private CompletableFuture<CompletionResult> previousCompletionRequest;
 
-    private final EventHandler<MouseEvent> popupItemEvent = mouseEvent -> {
-        if (mouseEvent.getSource() instanceof Node) {
-            mouseEvent.consume();
-            if (selectionIndex == itemsBox.getChildren().indexOf((Node) mouseEvent.getSource())) {
-                this.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
-            } else {
-                Node selected = itemsBox.getChildren().get(selectionIndex);
-                if (selected != null) {
-                    int indexOf = itemsBox.getChildren().indexOf((Node) mouseEvent.getSource());
-                    selected.getStyleClass().remove("selected-syntax");
-                    itemsBox.getChildren().get(indexOf).getStyleClass().add("selected-syntax");
-                    selectionIndex = indexOf;
-                }
-            }
-        }
-    };
     private Editor editor;
 
     public AutoCompletePopup(CompletionProvider provider) {
@@ -97,7 +70,7 @@ public class AutoCompletePopup extends Popup implements EditorComponent, Consume
         itemsList.setMaxHeight(300);
 
 
-//        topBox.setEffect(new DropShadow(BlurType.THREE_PASS_BOX, SHADOW_COLOR, 20, 0.3, 0, 2));
+//        topBox.setEffec   t(new DropShadow(BlurType.THREE_PASS_BOX, SHADOW_COLOR, 20, 0.3, 0, 2));
 
         bottomPane.setLeft(resultsCount);
         bottomPane.setRight(selectedLabel);
@@ -111,11 +84,9 @@ public class AutoCompletePopup extends Popup implements EditorComponent, Consume
     @Override
     public void install(@NotNull Editor editor) {
         editor.getTextChangeEventStream()
-                .reduceSuccessions(Collections::singletonList, (objects, plainTextChange) ->
-                        Stream.concat(objects.stream(), Stream.of(plainTextChange)).toList(), Duration.ofMillis(SHORT_DELAY_MS)
-                )
+                .retainLatestUntilLater()
+                .reduceSuccessions(Collections::singletonList, (a, b) -> Stream.concat(a.stream(), Stream.of(b)).toList(), Duration.ofMillis(300))
                 .addObserver(this);
-
         this.editor = editor;
     }
 
