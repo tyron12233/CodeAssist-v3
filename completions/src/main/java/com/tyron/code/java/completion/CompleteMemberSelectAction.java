@@ -58,6 +58,27 @@ public class CompleteMemberSelectAction implements CompletionAction {
             }
         }
 
+        /*
+         * The user is likely trying to complete a static method from
+         * a non-imported class, so we try to find the class and import it
+         */
+        if (type.getKind() == TypeKind.PACKAGE && !type.toString().contains(".") && Character.isUpperCase(type.toString().charAt(0))) {
+            String className = type.toString();
+            JavaModule module = args.analysisResult().module();
+            List<ClassInfo> list = ModuleUtils.getAllClasses(module).stream()
+                    .filter(classInfo -> classInfo.getSimpleName().equals(className))
+                    .toList();
+            if (!list.isEmpty()) {
+                ClassInfo classInfo = list.get(0);
+                TypeElement typeElement = task.getElements().getTypeElement(
+                        classInfo.getName().replace('/', '.')
+                );
+                if (typeElement != null) {
+                    type = typeElement.asType();
+                }
+            }
+        }
+
         if (type instanceof ArrayType) {
             return completeArrayMemberSelect(isStatic);
         } else if (type instanceof TypeVariable) {
