@@ -56,7 +56,7 @@ public class CompletionListCell extends ListCell<CompletionCandidate> {
             label.setAlignment(Pos.CENTER_LEFT);
             label.setFont(new Font("Jetbrains Mono", 14));
 
-            labelDesc.setFont(new Font("Jetbrains Mono", 10));
+            labelDesc.setFont(new Font("Jetbrains Mono", 12));
             labelDesc.setPadding(new Insets(0, 0, 0, 4));
             label.setAlignment(Pos.CENTER_LEFT);
             labelDesc.setTextOverrun(OverrunStyle.ELLIPSIS);
