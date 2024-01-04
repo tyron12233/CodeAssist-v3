@@ -35,6 +35,8 @@ public class Analyzer {
     private final Consumer<String> progressConsumer;
     private final ModuleFileManager moduleFileManager;
 
+    private final DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
+
     public Analyzer(FileManager fileManager, JavaModule projectModule, Consumer<String> progressConsumer) {
         this.projectModule = projectModule;
         this.progressConsumer = progressConsumer;
@@ -124,7 +126,6 @@ public class Analyzer {
         public AnalysisResult call() throws Exception {
             progressConsumer.accept("1. Getting task from task pool.");
             Context context = new Context();
-            DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
             JavacTaskImpl javacTask = getJavacTask(file, contents, context, javaProject, collector);
 
             moduleFileManager.setCompletingFile(file, contents);
@@ -144,8 +145,6 @@ public class Analyzer {
 
                     Iterable<? extends Element> analyzed = javacTask.analyze();
 
-                    List<Diagnostic<? extends JavaFileObject>> diagnostics = collector.getDiagnostics();
-
                     AnalysisResult analysisResult = new AnalysisResult(javaProject, javacTask, parsed.iterator().next(), analyzed, Analyzer.this);
                     consumer.accept(analysisResult);
                     return analysisResult;
@@ -164,5 +163,9 @@ public class Analyzer {
         if (cancelled.get() || Thread.interrupted()) {
             throw new CancellationException();
         }
+    }
+
+    public List<com.tyron.code.diagnostic.Diagnostic> getDiagnostics() {
+        return collector.getDiagnostics().stream().map(com.tyron.code.diagnostic.Diagnostic::from).toList();
     }
 }

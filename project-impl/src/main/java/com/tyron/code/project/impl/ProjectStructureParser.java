@@ -1,32 +1,21 @@
 package com.tyron.code.project.impl;
 
 import com.google.common.collect.ImmutableList;
-import com.tyron.code.info.builder.FileInfoBuilder;
 import com.tyron.code.logging.Logging;
 import com.tyron.code.project.InitializationException;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.impl.config.ModuleConfig;
 import com.tyron.code.project.impl.model.*;
 import com.tyron.code.project.model.ProjectError;
-import com.tyron.code.project.model.module.ErroneousRootModule;
-import com.tyron.code.project.model.module.JarModule;
 import com.tyron.code.project.model.module.Module;
-import com.tyron.code.project.util.Unchecked;
 import org.slf4j.Logger;
 import red.jackf.tomlconfig.TOMLConfig;
 import red.jackf.tomlconfig.settings.FailMode;
 
-import java.io.IOException;
-import java.io.ObjectOutput;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
+import java.util.*;
 
 public class ProjectStructureParser {
 
@@ -36,19 +25,28 @@ public class ProjectStructureParser {
             .withReadFailMode(FailMode.THROW)
             .build();
 
+    private final Set<Module> modulesParsed = new HashSet<>();
     private final Map<String, Module> includedProjects;
     private final Map<Module, ModuleConfig> configMap;
 
     private final List<ProjectError> rootErrors = new ArrayList<>();
+    private final ModuleManager moduleManager;
 
 
-    public ProjectStructureParser() {
+    public ProjectStructureParser(ModuleManager moduleManager) {
+        this.moduleManager = moduleManager;
         includedProjects = new HashMap<>();
         configMap = new HashMap<>();
     }
 
+    public Set<Module> getModulesParsed() {
+        return modulesParsed;
+    }
+
     public RootModuleImpl parse(Path rootDirectory) {
-        return parseImpl(rootDirectory);
+        RootModuleImpl rootModule = parseImpl(rootDirectory);
+        modulesParsed.add(rootModule);
+        return rootModule;
     }
 
     private RootModuleImpl parseImpl(Path rootDirectory) {
@@ -57,14 +55,14 @@ public class ProjectStructureParser {
         Path rootConfig = rootDirectory.resolve(Module.CONFIG_NAME);
         if (!Files.exists(rootConfig)) {
             rootErrors.add(new ProjectError("Root configuration does not exist."));
-            return new ErroneousRootModuleImpl(rootDirectory, List.of(), rootErrors);
+            return new ErroneousRootModuleImpl(moduleManager, rootDirectory, List.of(), rootErrors);
         }
 
         ModuleConfig rootModuleConfig = TOML_CONFIG.readConfig(ModuleConfig.class, rootConfig);
 
         if (rootModuleConfig.moduleType == ModuleConfig.ModuleType.JAVA) {
             rootErrors.add(new ProjectError("JAVA type is not supported on root projects."));
-            return new ErroneousRootModuleImpl(rootDirectory, List.of(), rootErrors);
+            return new ErroneousRootModuleImpl(moduleManager, rootDirectory, List.of(), rootErrors);
         }
 
         List<Path> includedProjectPaths = rootModuleConfig.includedModules.stream().map(rootDirectory::resolve).toList();
@@ -77,26 +75,33 @@ public class ProjectStructureParser {
                 .filter(Files::exists)
                 .toList();
         for (Path existingProjectPath : existingProjectPaths) {
-            try {
-                processIncludedProject(existingProjectPath);
-            } catch (InitializationException e) {
-                includedProjects.put(
-                        existingProjectPath.getFileName().toString(),
-                        new ErroneousModuleImpl(existingProjectPath, List.of(new ProjectError(e.getMessage())))
-                );
-            }
+            processIncludedProject(existingProjectPath);
         }
 
         resolveProjectDependencies();
 
         if (!rootErrors.isEmpty()) {
-            return new ErroneousRootModuleImpl(rootDirectory, ImmutableList.copyOf(includedProjects.values()), rootErrors);
+            return new ErroneousRootModuleImpl(moduleManager, rootDirectory, ImmutableList.copyOf(includedProjects.values()), rootErrors);
         }
 
-        return new RootModuleImpl(rootDirectory, ImmutableList.copyOf(includedProjects.values()));
+        return new RootModuleImpl(moduleManager, rootDirectory, ImmutableList.copyOf(includedProjects.values()));
     }
 
-    private void processIncludedProject(Path path) throws InitializationException {
+    private void processIncludedProject(Path existingProjectPath) {
+        AbstractModule module;
+        try {
+            module = processIncludedProjectImpl(existingProjectPath);
+        } catch (InitializationException e) {
+            module = new ErroneousModuleImpl(moduleManager, existingProjectPath, List.of(new ProjectError(e.getMessage())));
+        }
+        Module old = includedProjects.put(module.getName(), module);
+        if (old != null) {
+            throw new InitializationException("Duplicate module name: " + module.getName());
+        }
+        modulesParsed.add(module);
+    }
+
+    private AbstractModule processIncludedProjectImpl(Path path) throws InitializationException {
         Path configPath = path.resolve(Module.CONFIG_NAME);
         if (!Files.exists(configPath)) {
             throw new InitializationException("Included project does not have a configuration file: " + configPath);
@@ -114,7 +119,7 @@ public class ProjectStructureParser {
 
         final AbstractModule module;
         if (moduleConfig.moduleType == ModuleConfig.ModuleType.JAVA) {
-            module = new JavaModuleImpl(path);
+            module = new JavaModuleImpl(moduleManager, path);
         } else {
             throw new InitializationException("Unsupported module type: " + moduleConfig.moduleType);
         }
@@ -123,11 +128,8 @@ public class ProjectStructureParser {
         String name = moduleConfig.name.isEmpty() ? path.getFileName().toString() : moduleConfig.name;
         module.setName(name);
 
-        Module old = includedProjects.put(name, module);
-        if (old != null) {
-            throw new InitializationException("Duplicate module name: " + name);
-        }
         configMap.put(module, moduleConfig);
+        return module;
     }
 
     private void resolveProjectDependencies() {
@@ -147,7 +149,7 @@ public class ProjectStructureParser {
             if (includedProject instanceof JavaModuleImpl javaModule) {
                 logger.debug("Using default JDK");
                 Path path = Paths.get("/home/tyronscott/IdeaProjects/CodeAssistCompletions/completions/src/test/resources/android.jar");
-                JdkModuleImpl jdkModule = new JdkModuleImpl(path, "11");
+                JdkModuleImpl jdkModule = new JdkModuleImpl(moduleManager, path, "11");
                 javaModule.setJdk(jdkModule);
             }
         });
@@ -174,8 +176,8 @@ public class ProjectStructureParser {
             return;
         }
 
-        JarModuleImpl jarModule = new JarModuleImpl(resolvedPath);
-        new ModuleInitializer().initializeModule(jarModule);
+        JarModuleImpl jarModule = new JarModuleImpl(moduleManager, resolvedPath);
+        modulesParsed.add(jarModule);
         addDependencyWithScope(((JavaModuleImpl) includedProject), jarModule, dependency.scope);
 
     }

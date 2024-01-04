@@ -1,7 +1,9 @@
 package com.tyron.code.project.impl.model;
 
 import com.tyron.code.info.FileInfo;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.model.module.Module;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -11,31 +13,38 @@ import java.util.Set;
 
 public class AbstractModule implements Module {
 
+    private final ModuleManager moduleManager;
     private final Path root;
 
     private String name;
-    private final List<Module> dependencies;
+    private final List<String> dependencies;
 
     private final List<FileInfo> files;
 
-    public AbstractModule(Path rootDirectory) {
+    public AbstractModule(ModuleManager moduleManager, Path rootDirectory) {
+        this.moduleManager = moduleManager;
         this.root = rootDirectory;
         this.dependencies = new ArrayList<>();
         this.files = new ArrayList<>();
     }
 
     @Override
-    public String getName() {
+    public @NotNull ModuleManager getModuleManager() {
+        return moduleManager;
+    }
+
+    @Override
+    public @NotNull String getName() {
         return name;
     }
 
     @Override
-    public List<Module> getDependencies() {
+    public @NotNull List<String> getDependencies() {
         return Collections.unmodifiableList(dependencies);
     }
 
     @Override
-    public Path getRootDirectory() {
+    public @NotNull Path getRootDirectory() {
         return root;
     }
 
@@ -44,11 +53,11 @@ public class AbstractModule implements Module {
     }
 
     public void addDependency(Module dependency) {
-        dependencies.add(dependency);
+        dependencies.add(dependency.getName());
     }
 
     @Override
-    public List<FileInfo> getFiles() {
+    public @NotNull List<FileInfo> getFiles() {
         return files;
     }
 

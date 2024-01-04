@@ -2,6 +2,7 @@ package com.tyron.code.project.dependency;
 
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.model.module.Module;
 
 import java.util.*;
@@ -25,11 +26,16 @@ public class DependencyUtil {
 
             visitedModules.add(current);
 
-            List<Module> dependencies = current.getDependencies();
-            for (Module dependency : dependencies) {
-                if (!visitedModules.contains(dependency)) {
-                    graph.putEdge(current, dependency);
-                    queue.add(dependency);
+            List<String> dependencies = current.getDependencies();
+            for (String dependencyName : dependencies) {
+                ModuleManager moduleManager = module.getModuleManager();
+                Optional<Module> dependency = moduleManager.findModuleByName(dependencyName);
+                if (dependency.isEmpty()) {
+                    throw new IllegalStateException("Module " + current.getName() + " depends on module " + dependencyName + " which does not exist");
+                }
+                if (!visitedModules.contains(dependency.get())) {
+                    graph.putEdge(current, dependency.get());
+                    queue.add(dependency.get());
                 }
             }
         }

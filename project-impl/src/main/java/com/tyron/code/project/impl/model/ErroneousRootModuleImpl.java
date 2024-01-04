@@ -1,5 +1,6 @@
 package com.tyron.code.project.impl.model;
 
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.model.ProjectError;
 import com.tyron.code.project.model.module.ErroneousRootModule;
 import com.tyron.code.project.model.module.Module;
@@ -11,8 +12,8 @@ public class ErroneousRootModuleImpl extends RootModuleImpl implements Erroneous
 
     private final List<ProjectError> errors;
 
-    public ErroneousRootModuleImpl(Path rootDirectory, List<Module> includedModules, List<ProjectError> errors) {
-        super(rootDirectory, includedModules);
+    public ErroneousRootModuleImpl(ModuleManager moduleManager, Path rootDirectory, List<Module> includedModules, List<ProjectError> errors) {
+        super(moduleManager, rootDirectory, includedModules);
         this.errors = errors;
     }
 

@@ -1,6 +1,7 @@
 package com.tyron.code.project.impl.model;
 
 import com.tyron.code.info.ClassInfo;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.model.module.SourceModule;
 
 import java.nio.file.Path;
@@ -10,8 +11,8 @@ import java.util.Set;
 public class SourceModuleImpl<T extends ClassInfo> extends AbstractModule implements SourceModule<T> {
     private final Set<T> classInfos;
 
-    public SourceModuleImpl(Path root) {
-        super(root);
+    public SourceModuleImpl(ModuleManager moduleManager, Path root) {
+        super(moduleManager, root);
         this.classInfos = new HashSet<>();
     }
 

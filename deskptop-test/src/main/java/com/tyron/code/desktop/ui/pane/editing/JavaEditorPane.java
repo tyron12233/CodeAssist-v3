@@ -6,9 +6,10 @@ import com.tyron.code.desktop.ui.control.richtext.Editor;
 import com.tyron.code.desktop.ui.control.richtext.bracket.BracketMatchGraphicFactory;
 import com.tyron.code.desktop.ui.control.richtext.bracket.SelectedBracketTracking;
 import com.tyron.code.desktop.ui.control.richtext.completion.AutoCompletePopup;
-import com.tyron.code.desktop.ui.control.richtext.problem.ProblemGraphicFactory;
+import com.tyron.code.desktop.ui.control.richtext.problem.*;
 import com.tyron.code.desktop.ui.control.richtext.source.CompletionProvider;
 import com.tyron.code.desktop.util.WorkspaceUtil;
+import com.tyron.code.diagnostic.Diagnostic;
 import com.tyron.code.info.SourceClassInfo;
 import com.tyron.code.java.analysis.Analyzer;
 import com.tyron.code.java.completion.CompletionCandidate;
@@ -37,6 +38,7 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
     protected final AtomicBoolean updateLock = new AtomicBoolean();
     protected final Editor editor;
     protected SourceClassPathNode pathNode;
+    private Analyzer analyzer;
 
     public JavaEditorPane(JavaModule javaModule) {
         this.javaModule = javaModule;
@@ -47,6 +49,7 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
                 new BracketMatchGraphicFactory(),
                 new ProblemGraphicFactory()
         );
+        editor.setProblemTracking(new ProblemTracking());
 
         setCenter(editor);
 
@@ -57,7 +60,11 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
 
             int offset = editor.getCodeArea().getCaretPosition();
             TwoDimensional.Position position = editor.getCodeArea().offsetToPosition(offset, TwoDimensional.Bias.Backward);
-            return completor.getCompletionResult(pathNode.getValue().getPath().toAbsolutePath(), position.getMajor(), position.getMinor());
+
+            CompletionResult completionResult = completor.getCompletionResult(pathNode.getValue().getPath().toAbsolutePath(), position.getMajor(), position.getMinor());
+
+            List<Diagnostic> diagnostics = analyzer.getDiagnostics();
+            return completionResult;
         };
         AutoCompletePopup popup = new AutoCompletePopup(completionProvider);
         popup.install(editor);
@@ -103,7 +110,7 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
             editor.getTextChangeEventStream()
                     .addObserver(plainTextChange -> fileManager.setSnapshotContent(classInfo.getPath().toUri(), editor.getText()));
 
-            Analyzer analyzer = new Analyzer(fileManager, javaModule, __ -> {
+            analyzer = new Analyzer(fileManager, javaModule, __ -> {
             });
             completor = new Completor(fileManager, analyzer);
             updateLock.set(false);

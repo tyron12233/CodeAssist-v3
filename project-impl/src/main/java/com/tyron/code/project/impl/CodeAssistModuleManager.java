@@ -41,8 +41,13 @@ public class CodeAssistModuleManager implements ModuleManager {
 
     @Override
     public void initialize() {
-        ProjectStructureParser parser = new ProjectStructureParser();
+        ProjectStructureParser parser = new ProjectStructureParser(this);
         rootProject = parser.parse(rootDirectory);
+
+        Set<Module> modulesParsed = parser.getModulesParsed();
+        for (Module module : modulesParsed) {
+            includedProjects.put(module.getName(), module);
+        }
 
         ModuleInitializer initializer = new ModuleInitializer();
         initializer.initializeModules(
@@ -53,6 +58,10 @@ public class CodeAssistModuleManager implements ModuleManager {
         );
     }
 
+    @Override
+    public Optional<Module> findModuleByName(String name) {
+        return Optional.ofNullable(includedProjects.get(name));
+    }
 
     @Override
     public Optional<JavaFileInfo> getFileItem(Path path) {
@@ -65,7 +74,7 @@ public class CodeAssistModuleManager implements ModuleManager {
     }
 
     @Override
-    public Optional<Module> findModule(Path file) {
+    public Optional<Module> findModuleByFile(Path file) {
         List<Module> includedModules = getRootModule().getIncludedModules();
         for (Module module : includedModules) {
             Path moduleRoot = module.getRootDirectory();

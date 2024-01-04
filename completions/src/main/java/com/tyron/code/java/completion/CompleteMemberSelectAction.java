@@ -20,6 +20,7 @@ import shadow.com.sun.tools.javac.api.JavacTaskImpl;
 import shadow.com.sun.tools.javac.code.Type;
 import shadow.javax.lang.model.element.*;
 import shadow.javax.lang.model.type.*;
+import shadow.javax.lang.model.util.Types;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
@@ -179,7 +180,8 @@ public class CompleteMemberSelectAction implements CompletionAction {
                 });
 
         methods.values().stream()
-                .map(overloads -> method(analysisResult, overloads, !endsWithParen))
+                .map(overloads -> method(analysisResult, type, overloads, !endsWithParen))
+                .flatMap(Collection::stream)
                 .forEach(list::add);
 
         if (isStatic) {
@@ -221,8 +223,18 @@ public class CompleteMemberSelectAction implements CompletionAction {
         methods.get(name).add(method);
     }
 
-    private CompletionCandidate method(AnalysisResult analysisResult, List<ExecutableElement> overloads, boolean addParens) {
-        var first = overloads.get(0);
-        return new ExecutableElementCompletionCandidate(first);
+    private List<CompletionCandidate> method(AnalysisResult analysisResult, DeclaredType type, List<ExecutableElement> overloads, boolean addParens) {
+        JavacTaskImpl task = analysisResult.javacTask();
+        Types types = task.getTypes();
+        return overloads.stream()
+                .map(method -> {
+                    TypeMirror memberOf = types.asMemberOf(type, method);
+                    return new MethodCompletionCandidate(
+                            method,
+                            ((ExecutableType) memberOf)
+                    );
+                })
+                .map(it -> (CompletionCandidate) it)
+                .toList();
     }
 }

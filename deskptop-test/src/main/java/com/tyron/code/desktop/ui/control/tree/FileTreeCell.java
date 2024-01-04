@@ -1,5 +1,6 @@
 package com.tyron.code.desktop.ui.control.tree;
 
+import com.tyron.code.desktop.services.navigation.Actions;
 import com.tyron.code.desktop.util.Icons;
 import com.tyron.code.desktop.util.WorkspaceUtil;
 import com.tyron.code.project.ModuleManager;
@@ -35,12 +36,19 @@ public class FileTreeCell extends TreeCell<Path> {
             } else {
                 configureFile(item);
             }
+
+            setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    Actions actions = WorkspaceUtil.getScoped(workspace, Actions.class);
+                    actions.gotoDeclaration(item);
+                }
+            });
         }
     }
 
     private void configureFile(Path item) {
         ModuleManager moduleManager = WorkspaceUtil.getScoped(workspace, ModuleManager.class);
-        Optional<Module> module = moduleManager.findModule(item);
+        Optional<Module> module = moduleManager.findModuleByFile(item);
         if (module.isPresent()) {
             Module includedModule = module.get();
             if (includedModule instanceof JavaModule javaModule) {
@@ -70,7 +78,7 @@ public class FileTreeCell extends TreeCell<Path> {
         }
 
         ModuleManager moduleManager = WorkspaceUtil.getScoped(workspace, ModuleManager.class);
-        Optional<Module> module = moduleManager.findModule(item);
+        Optional<Module> module = moduleManager.findModuleByFile(item);
         if (module.isPresent()) {
             Module includedModule = module.get();
             if (includedModule instanceof ErroneousModule) {

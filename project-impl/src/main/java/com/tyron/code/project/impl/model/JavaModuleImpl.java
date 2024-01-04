@@ -1,26 +1,26 @@
 package com.tyron.code.project.impl.model;
 
 import com.tyron.code.info.SourceClassInfo;
+import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.JdkModule;
 import com.tyron.code.project.model.module.Module;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements JavaModule {
 
-    private final Set<Module> compileOnlyDependencies;
-    private final Set<Module> runtimeOnlyDependencies;
+    private final Set<String> compileOnlyDependencies;
+    private final Set<String> runtimeOnlyDependencies;
     private final Path rootDirectory;
     private JdkModule jdkModule;
 
-    public JavaModuleImpl(Path rootDirectory) {
-        super(rootDirectory);
+    public JavaModuleImpl(ModuleManager moduleManager, Path rootDirectory) {
+        super(moduleManager, rootDirectory);
         this.rootDirectory = rootDirectory;
         this.compileOnlyDependencies = new HashSet<>();
         this.runtimeOnlyDependencies = new HashSet<>();
@@ -38,12 +38,20 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
 
     @Override
     public Set<Module> getRuntimeOnlyDependencies() {
-        return Collections.unmodifiableSet(runtimeOnlyDependencies);
+        ModuleManager moduleManager = getModuleManager();
+        return runtimeOnlyDependencies.stream()
+                .map(moduleManager::findModuleByName)
+                .map(Optional::orElseThrow)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
     public Set<Module> getCompileOnlyDependencies() {
-        return Collections.unmodifiableSet(compileOnlyDependencies);
+        ModuleManager moduleManager = getModuleManager();
+        return compileOnlyDependencies.stream()
+                .map(moduleManager::findModuleByName)
+                .map(Optional::orElseThrow)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
@@ -52,8 +60,8 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
     }
 
     public void addImplementationDependency(Module module) {
-        runtimeOnlyDependencies.add(module);
-        compileOnlyDependencies.add(module);
+        runtimeOnlyDependencies.add(module.getName());
+        compileOnlyDependencies.add(module.getName());
     }
 
     public void setJdk(JdkModule jdkModule) {
@@ -66,7 +74,7 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
     }
 
     @Override
-    public List<Module> getDependencies() {
+    public @NotNull List<String> getDependencies() {
         return Stream.concat(
                 compileOnlyDependencies.stream(),
                 runtimeOnlyDependencies.stream()
@@ -74,10 +82,10 @@ public class JavaModuleImpl extends SourceModuleImpl<SourceClassInfo> implements
     }
 
     public void addRuntimeOnly(Module module) {
-        runtimeOnlyDependencies.add(module);
+        runtimeOnlyDependencies.add(module.getName());
     }
 
     public void addCompileOnly(Module module) {
-        compileOnlyDependencies.add(module);
+        compileOnlyDependencies.add(module.getName());
     }
 }

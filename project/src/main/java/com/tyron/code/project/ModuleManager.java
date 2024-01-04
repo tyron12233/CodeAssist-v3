@@ -38,7 +38,16 @@ public interface ModuleManager {
      * @param file The file to find the module for.
      * @return The module that contains the given file, or empty if no module contains the file.
      */
-    default Optional<Module> findModule(Path file) {
+    default Optional<Module> findModuleByFile(Path file) {
+        return Optional.empty();
+    }
+
+    /**
+     * Find a module by its name.
+     * @param name The name of the module to find.
+     * @return The module with the given name, or empty if no module with the given name exists.
+     */
+    default Optional<Module> findModuleByName(String name) {
         return Optional.empty();
     }
 }

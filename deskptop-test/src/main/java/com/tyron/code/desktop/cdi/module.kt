@@ -27,7 +27,7 @@ val mainModule = module {
     single<WorkspaceManager> { BasicWorkspaceManager() }
     single { DockingManager() }
     single { NavigationManager(get(), get()) }
-    single { Actions(get(), get()) }
+    single { Actions(get(), get(), get()) }
 
     single { WorkspaceRootPane(get(), get()) }
     single { WelcomePane() }

@@ -5,15 +5,22 @@ import com.tyron.code.desktop.ui.docking.DockingRegion;
 import com.tyron.code.desktop.ui.docking.DockingTab;
 import com.tyron.code.desktop.ui.pane.editing.SourcePane;
 import com.tyron.code.desktop.util.Icons;
+import com.tyron.code.desktop.util.WorkspaceUtil;
 import com.tyron.code.path.PathNode;
 import com.tyron.code.path.impl.SourceClassPathNode;
+import com.tyron.code.project.ModuleManager;
+import com.tyron.code.project.Workspace;
+import com.tyron.code.project.WorkspaceManager;
+import com.tyron.code.project.model.module.JavaModule;
 import com.tyron.code.project.model.module.Module;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Tab;
 import org.jetbrains.annotations.NotNull;
 
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class Actions {
@@ -23,20 +30,32 @@ public class Actions {
     @NotNull
     private final DockingManager dockingManager;
 
-    public Actions(@NotNull NavigationManager navigationManager, @NotNull DockingManager dockingManager) {
+    private final WorkspaceManager workspaceManager;
+
+    public Actions(@NotNull NavigationManager navigationManager, @NotNull DockingManager dockingManager, @NotNull WorkspaceManager workspaceManager) {
         this.navigationManager = navigationManager;
         this.dockingManager = dockingManager;
+        this.workspaceManager = workspaceManager;
     }
 
     @NotNull
     public SourceFileNavigable gotoDeclaration(@NotNull SourceClassPathNode path) {
-        Module module = path.getValueOfType(Module.class);
+        Workspace workspace = workspaceManager.getCurrent();
+        if (workspace == null) {
+            throw new IllegalStateException("No workspace selected.");
+        }
+
+        ModuleManager moduleManager = WorkspaceUtil.getScoped(workspace, ModuleManager.class);
+        Optional<Module> module = moduleManager.findModuleByFile(path.getValue().getPath());
+        if (module.isEmpty()) {
+            throw new IllegalStateException("No module found for path: " + path.getValue().getPath());
+        }
 
         return (SourceFileNavigable) getOrCreatePathContent(path, () -> {
             String title = path.getValue().getSourceFileName();
             Node graphic = Icons.getIconView(Icons.CLASS);
 
-            SourcePane content = new SourcePane(module);
+            SourcePane content = new SourcePane(module.get());
             content.onUpdatePath(path);
 
             DockingTab tab = createTab(dockingManager.getPrimaryRegion(), title, graphic, content);
@@ -138,5 +157,33 @@ public class Actions {
                 node = parent;
             }
         }
+    }
+
+    public void gotoDeclaration(Path item) {
+        Workspace current = workspaceManager.getCurrent();
+        if (current == null) {
+            return;
+        }
+
+        ModuleManager moduleManager = WorkspaceUtil.getScoped(current, ModuleManager.class);
+        Optional<Module> module = moduleManager.findModuleByFile(item);
+        if (module.isEmpty()) {
+            return;
+        }
+
+        Module containedModule = module.get();
+        if (containedModule instanceof JavaModule javaModule) {
+            gotoDeclaration(item, javaModule);
+            return;
+        }
+    }
+
+    public void gotoDeclaration(Path item, JavaModule javaModule) {
+        javaModule.getSourceFiles().forEach(sourceFile -> {
+            if (sourceFile.getPath().equals(item)) {
+                SourceClassPathNode path = new SourceClassPathNode(null, sourceFile);
+                gotoDeclaration(path);
+            }
+        });
     }
 }
