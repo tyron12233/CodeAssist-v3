@@ -1,9 +1,11 @@
 package com.tyron.code.java.analysis;
 
 import com.tyron.code.java.ModuleFileManager;
+import com.tyron.code.logging.Logging;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.FileSnapshot;
 import com.tyron.code.project.model.module.JavaModule;
+import org.slf4j.Logger;
 import shadow.com.sun.source.tree.CompilationUnitTree;
 import shadow.com.sun.tools.javac.api.JavacTaskImpl;
 import shadow.com.sun.tools.javac.api.JavacTool;
@@ -24,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public class Analyzer {
+    private static final Logger logger = Logging.get(Analyzer.class);
 
     private static final JavacTool SYSTEM_PROVIDER = JavacTool.create();
 
@@ -61,7 +64,14 @@ public class Analyzer {
         }
 
         currentTask = new FutureTask<>(new AnalyzeCallable(projectModule, path, contents, consumer));
-        new Thread(currentTask).start();
+        Thread thread = new Thread(currentTask, "Analyzer");
+        thread.setUncaughtExceptionHandler((t, e) -> {
+            if (e instanceof CancellationException) {
+                return;
+            }
+            logger.error("Error in analyzer thread", e);
+        });
+        thread.start();
     }
 
     private void handleCancellationException(Exception e) {

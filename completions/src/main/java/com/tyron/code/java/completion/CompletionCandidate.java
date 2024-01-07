@@ -1,6 +1,9 @@
 package com.tyron.code.java.completion;
 
 import com.google.common.collect.ImmutableMap;
+import com.tyron.code.java.model.ResolveAction;
+import com.tyron.code.java.model.ResolveActionParams;
+
 import java.util.Map;
 import java.util.Optional;
 
@@ -61,7 +64,7 @@ public interface CompletionCandidate {
         return SortCategory.UNKNOWN;
     }
 
-//    default Map<ResolveAction, ResolveActionParams> getResolveActions() {
-//        return ImmutableMap.of();
-//    }
+    default Map<ResolveAction, ResolveActionParams> getResolveActions() {
+        return ImmutableMap.of();
+    }
 }

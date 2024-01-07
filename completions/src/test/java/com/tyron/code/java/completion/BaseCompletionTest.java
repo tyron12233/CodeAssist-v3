@@ -46,7 +46,7 @@ public abstract class BaseCompletionTest {
         completor = new Completor(fileManager, analyzer);
     }
 
-    protected List<String> complete(String contents) {
+    protected List<CompletionCandidate> complete(String contents) {
         assert contents.contains("@complete");
 
         int completeIndex = contents.indexOf("@complete");
@@ -69,9 +69,11 @@ public abstract class BaseCompletionTest {
         int column = offset[1];
 
         CompletionResult completionResult = completor.getCompletionResult(tempFile, line, column);
-        return completionResult.getCompletionCandidates().stream()
-                .map(CompletionCandidate::getName)
-                .toList();
+        return completionResult.getCompletionCandidates();
+    }
+
+    protected List<String> completeString(String contents) {
+        return complete(contents).stream().map(CompletionCandidate::getName).toList();
     }
 
     private static int[] convertOffsetToLineColumn(String input, int offset) {

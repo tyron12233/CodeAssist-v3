@@ -1,6 +1,5 @@
 package com.tyron.code.java.completion;
 
-import com.google.common.truth.Truth;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,7 +10,7 @@ public class PackageCompletionTests extends BaseCompletionTest{
 
     @Test
     public void testPackageCompletionInsideMethodInvocations() {
-        List<String> completed = complete("""
+        List<String> completed = completeString("""
                 import java.util.*;
                                 
                 class Main {
@@ -27,7 +26,7 @@ public class PackageCompletionTests extends BaseCompletionTest{
 
     @Test
     public void testPackageCompletionWorksNormally() {
-        List<String> completed = complete("""
+        List<String> completed = completeString("""
                 class Main {
                     void main() {
                         java.util.@complete
@@ -39,7 +38,7 @@ public class PackageCompletionTests extends BaseCompletionTest{
 
     @Test
     public void testPackageCompletionWorksOnImports() {
-        List<String> complete = complete("""
+        List<String> complete = completeString("""
                 import java.util.@complete
                 """);
         assertThat(complete).contains("List");
@@ -47,7 +46,7 @@ public class PackageCompletionTests extends BaseCompletionTest{
 
     @Test
     public void testPackageCompletionWorksOnStaticImports() {
-        List<String> complete = complete("""
+        List<String> complete = completeString("""
                 import static java.lang.@complete
                 """);
         assertThat(complete).isNotEmpty();

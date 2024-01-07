@@ -9,7 +9,7 @@ public class CompletionVisibilityTest extends BaseCompletionTest {
 
     @Test
     void testStaticCallsShouldNotContainInstanceMethods() {
-        List<String> completed = complete("""
+        List<String> completed = completeString("""
                 class Main {
                     static void main() {
                         Main.@complete

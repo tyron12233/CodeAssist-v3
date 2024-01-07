@@ -3,6 +3,10 @@ package com.tyron.code.java.completion;
 import com.google.common.collect.ImmutableList;
 import com.tyron.code.info.ClassInfo;
 import com.tyron.code.java.analysis.AnalysisResult;
+import com.tyron.code.java.model.ResolveAction;
+import com.tyron.code.java.model.ResolveActionParams;
+import com.tyron.code.java.model.ResolveAddImportTextEditsParams;
+import com.tyron.code.java.util.PrintUtil;
 import com.tyron.code.project.model.JavaFileInfo;
 import com.tyron.code.project.model.PackageScope;
 import com.tyron.code.project.model.module.JavaModule;
@@ -27,8 +31,14 @@ import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 public class CompleteMemberSelectAction implements CompletionAction {
+
+
     @Override
     public ImmutableList<CompletionCandidate> getCompletionCandidates(CompletionArgs args) {
+        return getCandidatesImpl(args);
+    }
+
+    private ImmutableList<CompletionCandidate> getCandidatesImpl(CompletionArgs args) {
         JavacTaskImpl task = args.analysisResult().javacTask();
         TreePath path = args.currentAnalyzedPath();
         var trees = Trees.instance(task);
@@ -41,9 +51,11 @@ public class CompleteMemberSelectAction implements CompletionAction {
         }
 
         path = new TreePath(path, select.getExpression());
-        var isStatic = trees.getElement(path) instanceof TypeElement;
+        Element element = trees.getElement(path);
+        var isStatic = element instanceof TypeElement;
         var scope = trees.getScope(path);
         var type = trees.getTypeMirror(path);
+        var kind = type.getKind();
 
         Tree parent = path.getParentPath().getParentPath().getLeaf();
         boolean endsWithParen = parent.getKind() == Tree.Kind.METHOD_INVOCATION;
@@ -51,18 +63,24 @@ public class CompleteMemberSelectAction implements CompletionAction {
         // when inside a method invocation,
         // typing a package expression (java.util.something) the compiler infers it to be
         // an error type. we change the type to a package if it matches any package
-        if (type.getKind() == TypeKind.ERROR) {
+        if (kind == TypeKind.ERROR) {
             PackageElement packageElement = task.getElements().getPackageElement(type.toString());
             if (packageElement != null) {
                 type = packageElement.asType();
+                element = packageElement;
             }
         }
+
+
+        boolean isNonImported = kind == TypeKind.PACKAGE
+                                && !type.toString().contains(".") && Character.isUpperCase(type.toString().charAt(0));
+        boolean importQualifier = false;
 
         /*
          * The user is likely trying to complete a static method from
          * a non-imported class, so we try to find the class and import it
          */
-        if (type.getKind() == TypeKind.PACKAGE && !type.toString().contains(".") && Character.isUpperCase(type.toString().charAt(0))) {
+        if (isNonImported) {
             String className = type.toString();
             JavaModule module = args.analysisResult().module();
             List<ClassInfo> list = ModuleUtils.getAllClasses(module).stream()
@@ -74,15 +92,16 @@ public class CompleteMemberSelectAction implements CompletionAction {
                         classInfo.getName().replace('/', '.')
                 );
                 if (typeElement != null) {
+                    element = typeElement;
                     type = typeElement.asType();
+                    importQualifier = true;
                 }
             }
         }
 
-        if (type instanceof ArrayType) {
-            return completeArrayMemberSelect(isStatic);
-        } else if (type instanceof TypeVariable) {
-            return completeTypeVariableMemberSelect(
+        List<CompletionCandidate> candidates = switch(type.getKind()) {
+            case ARRAY -> completeArrayMemberSelect(isStatic);
+            case TYPEVAR -> completeTypeVariableMemberSelect(
                     args.analysisResult(),
                     scope,
                     (TypeVariable) type,
@@ -90,8 +109,7 @@ public class CompleteMemberSelectAction implements CompletionAction {
                     args.prefix(),
                     endsWithParen
             );
-        } else if (type instanceof DeclaredType) {
-            return completeDeclaredTypeMemberSelect(
+            case DECLARED -> completeDeclaredTypeMemberSelect(
                     args.analysisResult(),
                     scope,
                     (DeclaredType) type,
@@ -99,16 +117,38 @@ public class CompleteMemberSelectAction implements CompletionAction {
                     args.prefix(),
                     endsWithParen
             );
-        } else if (type instanceof Type.PackageType) {
-            return completePackage(
+            case PACKAGE -> completePackage(
                     args.analysisResult(),
                     scope,
                     (Type.PackageType) type,
                     args.prefix()
             );
+            default -> ImmutableList.of();
+        };
+
+        final var finalElement = element;
+
+        // If the user is trying to complete a static method from a non-imported class,
+        // we decorate the completions to import the class if selected
+        if (importQualifier) {
+            candidates = candidates.stream()
+                    .map(it -> CompletionCandidateDecorator.builder(it)
+                            .withName(
+                                    finalElement.getSimpleName() + "." + it.getName()
+                            )
+                            .withResolveAction(
+                                    ResolveAction.ADD_IMPORT_TEXT_EDIT,
+                                    new ResolveAddImportTextEditsParams(
+                                            args.analysisResult().parsedTree().getSourceFile().toUri(),
+                                            finalElement.toString()
+                                    )
+                            )
+                            .build()
+                    )
+                    .toList();
         }
 
-        return ImmutableList.of();
+        return ImmutableList.copyOf(candidates);
     }
 
     private ImmutableList<CompletionCandidate> completePackage(AnalysisResult analysisResult, Scope scope, Type.PackageType type, String prefix) {

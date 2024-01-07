@@ -1,7 +1,13 @@
 package com.tyron.code.java.completion;
 
+import com.google.common.collect.ImmutableMap;
+import com.tyron.code.java.model.ResolveAction;
+import com.tyron.code.java.model.ResolveActionParams;
+import com.tyron.code.java.model.ResolveAddImportTextEditsParams;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Optional;
 
 /** A candidate with import class edit actions. */
@@ -36,16 +42,15 @@ class ClassForImportCandidate implements CompletionCandidate {
         return SortCategory.TO_IMPORT;
     }
 
-//    @Override
-//    public Map<ResolveAction, ResolveActionParams> getResolveActions() {
-//        ImmutableMap.Builder<ResolveAction, ResolveActionParams> builder = new ImmutableMap.Builder<>();
-//        ResolveAddImportTextEditsParams params = new ResolveAddImportTextEditsParams();
-//        params.uri = filePath.toUri();
-//        params.classFullName = getEntity().getQualifiedName();
-//        builder.put(ResolveAction.ADD_IMPORT_TEXT_EDIT, params);
-//        builder.putAll(super.getResolveActions());
-//        return builder.build();
-//    }
+    @Override
+    public Map<ResolveAction, ResolveActionParams> getResolveActions() {
+        ImmutableMap.Builder<ResolveAction, ResolveActionParams> builder = new ImmutableMap.Builder<>();
+        ResolveAddImportTextEditsParams params = new ResolveAddImportTextEditsParams();
+        params.uri = filePath.toUri();
+        params.classFullName = fqn;
+        builder.put(ResolveAction.ADD_IMPORT_TEXT_EDIT, params);
+        return builder.build();
+    }
 
     @Override
     public String toString() {
