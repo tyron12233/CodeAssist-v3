@@ -110,8 +110,7 @@ public class JavaEditorPane extends BorderPane implements UpdatableNavigable {
             editor.getTextChangeEventStream()
                     .addObserver(plainTextChange -> fileManager.setSnapshotContent(classInfo.getPath().toUri(), editor.getText()));
 
-            analyzer = new Analyzer(fileManager, javaModule, __ -> {
-            });
+            analyzer = new Analyzer(fileManager, javaModule);
             completor = new Completor(fileManager, analyzer);
             updateLock.set(false);
         }

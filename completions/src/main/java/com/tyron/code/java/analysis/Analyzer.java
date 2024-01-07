@@ -32,14 +32,12 @@ public class Analyzer {
     private volatile FutureTask<AnalysisResult> currentTask;
 
     private final JavaModule projectModule;
-    private final Consumer<String> progressConsumer;
     private final ModuleFileManager moduleFileManager;
 
     private final DiagnosticCollector<JavaFileObject> collector = new DiagnosticCollector<>();
 
-    public Analyzer(FileManager fileManager, JavaModule projectModule, Consumer<String> progressConsumer) {
+    public Analyzer(FileManager fileManager, JavaModule projectModule) {
         this.projectModule = projectModule;
-        this.progressConsumer = progressConsumer;
         moduleFileManager = new ModuleFileManager(fileManager, projectModule);
     }
 
@@ -124,7 +122,6 @@ public class Analyzer {
 
         @Override
         public AnalysisResult call() throws Exception {
-            progressConsumer.accept("1. Getting task from task pool.");
             Context context = new Context();
             JavacTaskImpl javacTask = getJavacTask(file, contents, context, javaProject, collector);
 
@@ -132,16 +129,12 @@ public class Analyzer {
             try {
                 synchronized (lock) {
                     checkCancelled();
-                    progressConsumer.accept("3. Parsing");
 
                     Iterable<? extends CompilationUnitTree> parsed = javacTask.parse();
                     checkCancelled();
 
-                    progressConsumer.accept("4. Enter");
                     Iterable<? extends Element> elements = javacTask.enterTrees(parsed);
                     checkCancelled();
-
-                    progressConsumer.accept("5. Attribute");
 
                     Iterable<? extends Element> analyzed = javacTask.analyze();
 

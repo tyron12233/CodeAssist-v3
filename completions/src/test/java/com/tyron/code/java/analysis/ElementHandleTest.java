@@ -44,8 +44,7 @@ class ElementHandleTest {
         new ModuleInitializer().initializeModule(jdkModule);
         rootModule.setJdk(jdkModule);
 
-        analyzer = new Analyzer(fileManager, rootModule, (s -> {
-        }));
+        analyzer = new Analyzer(fileManager, rootModule);
     }
 
 

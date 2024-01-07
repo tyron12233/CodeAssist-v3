@@ -54,7 +54,7 @@ val mainModule = module {
         }
 
         scoped<Analyzer> {
-            Analyzer(get(), get<JavaModule>()) {}
+            Analyzer(get(), get<JavaModule>())
         }
     }
 }
