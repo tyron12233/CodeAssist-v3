@@ -5,6 +5,7 @@ import com.tyron.code.project.ModuleManager;
 import com.tyron.code.project.file.FileManager;
 import com.tyron.code.project.file.SimpleFileManager;
 import com.tyron.code.project.impl.FileSystemModuleManager;
+import com.tyron.code.project.impl.ModuleInitializer;
 import com.tyron.code.project.impl.model.JavaModuleImpl;
 import com.tyron.code.project.impl.model.JdkModuleImpl;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,10 +36,10 @@ public abstract class BaseCompletionTest {
         moduleManager = new FileSystemModuleManager(fileManager, root);
         moduleManager.initialize();
 
-        rootModule = (JavaModuleImpl) moduleManager.getRootModule();
+        rootModule = (JavaModuleImpl) moduleManager.getRootModule().getIncludedModules().get(0);
 
-        JdkModuleImpl jdkModule = new JdkModuleImpl(Paths.get("src/test/resources/android.jar"), "11");
-
+        JdkModuleImpl jdkModule = new JdkModuleImpl(moduleManager, Paths.get("src/test/resources/android.jar"), "11");
+        new ModuleInitializer().initializeModule(jdkModule);
         rootModule.setJdk(jdkModule);
 
         analyzer = new Analyzer(fileManager, rootModule, (s -> {

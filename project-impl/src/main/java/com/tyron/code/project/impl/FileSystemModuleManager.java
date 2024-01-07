@@ -37,7 +37,7 @@ public class FileSystemModuleManager implements ModuleManager {
     public FileSystemModuleManager(FileManager fileManager, Path root) {
         this.fileManager = fileManager;
         this.javaModule = new JavaModuleImpl(this, root);
-        this.projectModule = new RootModuleImpl(this, root, List.of((Module) root));
+        this.projectModule = new RootModuleImpl(this, root, List.of(javaModule));
         this.root = root;
     }
 
